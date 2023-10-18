@@ -449,6 +449,8 @@ $(function() {
 		var allTiles = getAllGridTiles();
 		updateProgress(0, allTiles.length);
 
+		M.toast({html: 'Starting download!', displayLength:7000, classes: 'start'});
+
 		var numThreads = parseInt($("#parallel-threads-box").val());
 		var outputDirectory = $("#output-directory-box").val();
 		var outputFile = $("#output-file-box").val();
@@ -548,6 +550,7 @@ $(function() {
 				done();
 				
 				if(cancellationToken) {
+					M.toast({html: 'Download Canceled!', displayLength:7000, classes: 'cancel'});
 					return;
 				}
 			});
@@ -569,6 +572,12 @@ $(function() {
 
 			updateProgress(allTiles.length, allTiles.length);
 			logItemRaw("All requests are done");
+
+			M.Toast.dismissAll();
+			var findate = Date.now();
+			var showdate = new Date(findate);
+			M.toast({html: 'Finished download! {$showdate}', displayLength:7000, classes: 'success'});
+
 
 			$("#stop-button").html("FINISH");
 		});

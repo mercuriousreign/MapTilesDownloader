@@ -64,6 +64,26 @@ html, body {
 	letter-spacing: 2px;
 }
 
+.toast.start {
+	background-color: #001772;
+	border-radius: 24px;
+}
+
+.toast.cancel {
+	background-color: #e5bf00;
+	border-radius: 24px;
+}
+
+.toast.success {
+	background-color: #0f7200;
+	border-radius: 24px;
+}
+
+.toast.fail {
+	background-color: #720000;
+	border-radius: 24px;
+}
+
 .step-number {
 	font-weight: 600;
 	font-size: 20px;
