@@ -446,10 +446,13 @@ $(function() {
 
 		var timestamp = Date.now().toString();
 
+		var startTime = Date.now(); 
+		var showTime = new Date(startTime).toUTCString();
+
 		var allTiles = getAllGridTiles();
 		updateProgress(0, allTiles.length);
 
-		M.toast({html: 'Starting download!', displayLength:7000, classes: 'start'});
+		M.toast({html: 'Starting download! at : ' + showTime, displayLength:9000, classes: 'start'});
 
 		var numThreads = parseInt($("#parallel-threads-box").val());
 		var outputDirectory = $("#output-directory-box").val();
@@ -572,11 +575,13 @@ $(function() {
 
 			updateProgress(allTiles.length, allTiles.length);
 			logItemRaw("All requests are done");
+			var finishTime = Date.now();
+			var showdate = new Date(finishTime).toUTCString();
 
 			M.Toast.dismissAll();
-			var findate = Date.now();
-			var showdate = new Date(findate);
-			M.toast({html: 'Finished download! {$showdate}', displayLength:7000, classes: 'success'});
+			
+			M.toast({html: 'Finished download! at ' +  showdate, displayLength:7000, classes: 'success'});
+			
 
 
 			$("#stop-button").html("FINISH");
