@@ -44,7 +44,10 @@ $(function() {
 
 	function initializeMap() {
 
-		mapboxgl.accessToken = 'pk.eyJ1IjoiYWxpYXNocmFmIiwiYSI6ImNqdXl5MHV5YTAzNXI0NG51OWFuMGp4enQifQ.zpd2gZFwBTRqiapp1yci9g';
+		// new token here
+		// mapboxgl.accessToken = 'pk.eyJ1IjoiYWxpYXNocmFmIiwiYSI6ImNqdXl5MHV5YTAzNXI0NG51OWFuMGp4enQifQ.zpd2gZFwBTRqiapp1yci9g';
+
+		mapboxgl.accessToken = 'pk.eyJ1IjoibWVyY3VyeXJlaWduIiwiYSI6ImNsbnZ3YnF2MDAydHgybmp5MWRlZGJ6dGwifQ.cU-vFZvjlnWDngTGd7410w'
 
 		map = new mapboxgl.Map({
 			container: 'map-view',
