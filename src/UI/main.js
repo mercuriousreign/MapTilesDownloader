@@ -164,6 +164,9 @@ $(function() {
 
 	// M.toast({html: toastHTML, displayLength:90000, classes: 'start'});
 
+
+	
+
 		M.toast({html: 'Click two points on the map to make a rectangle.', displayLength: 7000})
 	}
 
@@ -658,13 +661,15 @@ $(function() {
 		if (fails !== 0){
 
 
-			// var toastHTML = '<span>I am toast content</span><button class="btn-flat toast-action">Undo</button>';
+	var toastHTML = 'Download complications, '+fails+' out of '+ requests.length +' had problems Retry?' +  '<button id="retry"  class="btn-flat toast-action"> Yes </button><button id="noretry" class="btn-flat toast-action"> No </button>';
 
-	// toastHTML= '<div class="sometexts">Starting download! at : ' + showTime + '</div><div class="progress"><div class="indeterminate"></div></div>';
+			M.toast({html: toastHTML, displayLength:8000, classes: 'fail'});
 
-	var toastHTML = 'Download complications,'+fails+' out of '+ requests.length+' had problems Retry?' +  '<button class="btn-flat toast-action">Undo</button>';
-
-			M.toast({html: toastHTML, displayLength:7000, classes: 'fail'});
+			
+			$("#retry").click(retryDownload)
+			// $("#retry").click(function(){alert("testing");console.log("button clicks")})
+			
+			$("#noretry").click(function(){M.Toast.dismissAll()})
 			return false
 		}
 
@@ -673,10 +678,10 @@ $(function() {
 		return true
 	}
 
-	function retryDownload(missedTiles){
+	function retryDownload(){
 
 		var i = 0
-		var iterator = async.eachLimit(allTiles, numThreads, function(item, done) {
+		var iterator = async.eachLimit(missedTiles, numThreads, function(item, done) {
 
 			if(cancellationToken) {
 				return;
