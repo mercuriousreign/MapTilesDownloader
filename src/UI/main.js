@@ -159,6 +159,11 @@ $(function() {
 		draw.changeMode('draw_rectangle');
 
 		M.Toast.dismissAll();
+		
+	// var toastHTML= '<div class="sometexts" style="flex-direction : column">Starting download! at : ' + 123 +'<div class="progress"><div class="indeterminate"></div></div></div>';
+
+	// M.toast({html: toastHTML, displayLength:90000, classes: 'start'});
+
 		M.toast({html: 'Click two points on the map to make a rectangle.', displayLength: 7000})
 	}
 
@@ -472,7 +477,11 @@ $(function() {
 		var allTiles = getAllGridTiles();
 		updateProgress(0, allTiles.length);
 
-		M.toast({html: 'Starting download! at : ' + showTime, displayLength:9000, classes: 'start'});
+		
+
+	var toastHTML= '<div class="sometexts" style="flex-direction : column">Starting download! at : ' + showTime +'<div class="progress"><div class="indeterminate"></div></div></div>';
+
+		M.toast({html: toastHTML, displayLength:9000, classes: 'start'});
 
 		var numThreads = parseInt($("#parallel-threads-box").val());
 		var outputDirectory = $("#output-directory-box").val();
@@ -612,12 +621,15 @@ $(function() {
 
 			logItemRaw("\nTotal elapsed time: " + new Date (finishTime - startTime).getSeconds() + " seconds")
 
-			//var arryi = {1:"e",2:"e",3:"e"};
-			//console.log("All of the reqs" + requests + arryi);
+			
 			
 
+			// checks all the requests, missedTiles and missedRequests
+			console.log("all the requests")
 			console.dir(requests);
+			console.log("all the missiing titles")
 			console.dir(missedTiles)
+			console.log("all the missed requests")
 			console.dir(missedRequest);
 
 			if(validateDownload()){
@@ -642,8 +654,17 @@ $(function() {
 			}
 		}
 
+		
 		if (fails !== 0){
-			M.toast({html: 'Download complications,'+fails+' out of '+ requests.length+' had problems Retry?' +  "<class=Button onClick={retryDownload}> Yes</>", displayLength:7000, classes: 'success'});
+
+
+			// var toastHTML = '<span>I am toast content</span><button class="btn-flat toast-action">Undo</button>';
+
+	// toastHTML= '<div class="sometexts">Starting download! at : ' + showTime + '</div><div class="progress"><div class="indeterminate"></div></div>';
+
+	var toastHTML = 'Download complications,'+fails+' out of '+ requests.length+' had problems Retry?' +  '<button class="btn-flat toast-action">Undo</button>';
+
+			M.toast({html: toastHTML, displayLength:7000, classes: 'fail'});
 			return false
 		}
 
@@ -652,7 +673,119 @@ $(function() {
 		return true
 	}
 
-	
+	function retryDownload(missedTiles){
+
+		var i = 0
+		var iterator = async.eachLimit(allTiles, numThreads, function(item, done) {
+
+			if(cancellationToken) {
+				return;
+			}
+
+			var boxLayer = previewRect(item);
+
+			var url = "/download-tile";
+
+			var data = new FormData();
+			data.append('x', item.x)
+			data.append('y', item.y)
+			data.append('z', item.z)
+			data.append('quad', generateQuadKey(item.x, item.y, item.z))
+			data.append('outputDirectory', outputDirectory)
+			data.append('outputFile', outputFile)
+			data.append('outputType', outputType)
+			data.append('outputScale', outputScale)
+			data.append('timestamp', timestamp)
+			data.append('source', source)
+			data.append('bounds', boundsArray.join(","))
+			data.append('center', centerArray.join(","))
+
+			var request = $.ajax({
+				"url": url,
+				async: true,
+				timeout: 30 * 1000,
+				type: "post",
+			    contentType: false,
+			    processData: false,
+				data: data,
+				dataType: 'json',
+			}).done(function(data) {
+
+				if(cancellationToken) {
+					return;
+				}
+
+				/// The code that differentiate between what has been downloaded or not//
+				if(data.code == 200) {
+					showTinyTile(data.image)
+					logItem(item.x, item.y, item.z, data.message);
+				} else {
+					logItem(item.x, item.y, item.z, data.code + " Error downloading tile");
+
+					missedTiles.push(item);
+					missedRequest.push(self);
+
+				}
+
+			}).fail(function(data, textStatus, errorThrown) {
+
+				if(cancellationToken) {
+					return;
+				}
+
+				logItem(item.x, item.y, item.z, "Error while relaying tile");
+				missedTiles.push(item);
+				missedRequest.push(self);
+				//allTiles.push(item);
+
+			}).always(function(data) {
+				i++;
+
+				removeLayer(boxLayer);
+				updateProgress(i, allTiles.length);
+
+				done();
+				
+				if(cancellationToken) {
+					M.toast({html: 'Download Canceled!', displayLength:7000, classes: 'cancel'});
+					return;
+				}
+			});
+
+			requests.push(request);
+
+		}, async function(err) {
+
+			var request = await $.ajax({
+				url: "/end-download",
+				async: true,
+				timeout: 30 * 1000,
+				type: "post",
+				contentType: false,
+				processData: false,
+				data: data,
+				dataType: 'json',
+			})
+
+			updateProgress(allTiles.length, allTiles.length);
+			logItemRaw("All requests are done");
+			var finishTime = Date.now();
+			var showdate = new Date(finishTime).toUTCString();
+
+			M.Toast.dismissAll();
+			
+			M.toast({html: 'Finished download! at ' +  showdate, displayLength:7000, classes: 'success'});
+			logItemRaw("\nTotal elapsed time: " + new Date (finishTime - startTime).getSeconds() + " seconds")
+
+			var arryi = {1:"e",2:"e",3:"e"};
+			console.log("All of the reqs" + requests + arryi);
+
+
+			$("#stop-button").html("FINISH");
+		});
+
+
+	}
 
 	function updateProgress(value, total) {
 		var progress = value / total;
