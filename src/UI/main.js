@@ -204,6 +204,8 @@ $(function() {
 		return (180/Math.PI*Math.atan(0.5*(Math.exp(n)-Math.exp(-n))));
 	}
 
+
+	//Is this the actual image?
 	function getTileRect(x, y, zoom) {
 
 		var c1 = new mapboxgl.LngLat(tile2long(x, zoom), tile2lat(y, zoom));
@@ -351,6 +353,7 @@ $(function() {
 
 	}
 
+	//Adds a layer of grid preview to the mapbox
 	function previewRect(rectInfo) {
 
 		var array = getArrayByBounds(rectInfo.rect);
@@ -374,12 +377,14 @@ $(function() {
 		return id;
 	}
 
+	//Removes the layer that exists on mapbox
 	function removeLayer(id) {
 		if(map.getSource(id) != null) {
 			map.removeLayer(id);
 			map.removeSource(id);
 		}
 	}
+
 
 	function generateQuadKey(x, y, z) {
 	    var quadKey = [];
@@ -395,7 +400,6 @@ $(function() {
 	        }
 	        quadKey.push(digit);
 	    }
-			console.log("quadkey is "+quadKey)
 	    return quadKey.join('');
 	}
 
@@ -489,6 +493,7 @@ $(function() {
 		data.append('bounds', boundsArray.join(","))
 		data.append('center', centerArray.join(","))
 
+		// Initial start of the download phase
 		var request = await $.ajax({
 			url: "/start-download",
 			async: true,
@@ -540,11 +545,13 @@ $(function() {
 					return;
 				}
 
+				/// The code that differentiate between what has been downloaded or not//
 				if(data.code == 200) {
 					showTinyTile(data.image)
 					logItem(item.x, item.y, item.z, data.message);
 				} else {
 					logItem(item.x, item.y, item.z, data.code + " Error downloading tile");
+
 				}
 
 			}).fail(function(data, textStatus, errorThrown) {
@@ -595,9 +602,17 @@ $(function() {
 			M.toast({html: 'Finished download! at ' +  showdate, displayLength:7000, classes: 'success'});
 			logItemRaw("\nTotal elapsed time: " + new Date (finishTime - startTime).getSeconds() + " seconds")
 
+			var arryi = {1:"e",2:"e",3:"e"};
+			console.log("All of the reqs" + requests + arryi);
+
 
 			$("#stop-button").html("FINISH");
 		});
+
+	}
+
+	function retryDownload(){
+		
 
 	}
 
@@ -610,6 +625,7 @@ $(function() {
 		$("#progress-subtitle").html(value.toLocaleString() + " <span>out of</span> " + total.toLocaleString())
 	}
 
+	// Sends the corrdiantes of the item that has been downloaded
 	function logItem(x, y, z, text) {
 		logItemRaw(x + ',' + y + ',' + z + ' : ' + text)
 	}
