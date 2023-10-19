@@ -581,7 +581,7 @@ $(function() {
 			M.Toast.dismissAll();
 			
 			M.toast({html: 'Finished download! at ' +  showdate, displayLength:7000, classes: 'success'});
-			
+			logItemRaw("\nTotal elapsed time: " + new Date (finishTime - startTime).getSeconds() + " seconds")
 
 
 			$("#stop-button").html("FINISH");
