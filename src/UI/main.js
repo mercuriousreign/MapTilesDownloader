@@ -2,12 +2,15 @@ var mapView;
 
 $(function() {
 
-	var map = null;
-	var draw = null;
-	var geocoder = null;
+	var map = null; //Variable that contains the Mapbox view  for user to interact with
+
+	var draw = null; // Contains information about user drawn reactangle such as the start position, used for pinpointing position of map download
+
+	var geocoder = null; // Contain Mapbox geocode process for conversion of location to long and lattitude, etc.
+
 	var bar = null;
 
-	var cancellationToken = null;
+	var cancellationToken = null; //Boolean to check if user has cancel the download process
 	var requests = [];
 
 	var sources = {
@@ -45,7 +48,6 @@ $(function() {
 	function initializeMap() {
 
 		// new token here
-		// mapboxgl.accessToken = 'pk.eyJ1IjoiYWxpYXNocmFmIiwiYSI6ImNqdXl5MHV5YTAzNXI0NG51OWFuMGp4enQifQ.zpd2gZFwBTRqiapp1yci9g';
 
 		mapboxgl.accessToken = 'pk.eyJ1IjoibWVyY3VyeXJlaWduIiwiYSI6ImNsbnZ3YnF2MDAydHgybmp5MWRlZGJ6dGwifQ.cU-vFZvjlnWDngTGd7410w'
 
@@ -57,8 +59,12 @@ $(function() {
 		});
 
 		geocoder = new MapboxGeocoder({ accessToken: mapboxgl.accessToken });
+
+		//Initial map is only a view, thus neeeds a seperate plugin to process information
 		var control = map.addControl(geocoder);
 	}
+
+	//<-- Functions related to UI -->
 
 	function initializeMaterialize() {
 		$('select').formSelect();
@@ -140,6 +146,8 @@ $(function() {
 		})
 
 	}
+
+	//<--- Functions related to Tile geocode --->
 
 	function startDrawing() {
 		removeGrid();
@@ -387,6 +395,7 @@ $(function() {
 	        }
 	        quadKey.push(digit);
 	    }
+			console.log("quadkey is "+quadKey)
 	    return quadKey.join('');
 	}
 
@@ -413,7 +422,9 @@ $(function() {
 		//$("#output-directory-box").val(timestamp)
 	}
 
+	//Previews 4 of the latest downloaded tiles at the .tile-strip tag
 	function showTinyTile(base64) {
+		//Remove old tiles
 		var currentImages = $(".tile-strip img");
 
 		for(var i = 4; i < currentImages.length; i++) {
@@ -422,6 +433,7 @@ $(function() {
 
 		var image = $("<img/>").attr('src', "data:image/png;base64, " + base64)
 
+		//Adds new tiles
 		var strip = $(".tile-strip");
 		strip.prepend(image)
 	}
