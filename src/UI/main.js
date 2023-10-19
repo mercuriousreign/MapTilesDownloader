@@ -13,6 +13,10 @@ $(function() {
 	var cancellationToken = null; //Boolean to check if user has cancel the download process
 	var requests = [];
 
+	var missedRequest = []; //Draft array to insert requests that were missed
+	
+	var missedTiles = []; //Draft array to insert tiles that were missed;
+
 	var sources = {
 
 		"Bing Maps": "http://ecn.t0.tiles.virtualearth.net/tiles/r{quad}.jpeg?g=129&mkt=en&stl=H",
@@ -506,6 +510,7 @@ $(function() {
 		})
 
 		let i = 0;
+		//Iterates through all the tiles to download.
 		var iterator = async.eachLimit(allTiles, numThreads, function(item, done) {
 
 			if(cancellationToken) {
@@ -552,6 +557,9 @@ $(function() {
 				} else {
 					logItem(item.x, item.y, item.z, data.code + " Error downloading tile");
 
+					missedTiles.push(item);
+					missedRequest.push(self);
+
 				}
 
 			}).fail(function(data, textStatus, errorThrown) {
@@ -561,6 +569,8 @@ $(function() {
 				}
 
 				logItem(item.x, item.y, item.z, "Error while relaying tile");
+				missedTiles.push(item);
+				missedRequest.push(self);
 				//allTiles.push(item);
 
 			}).always(function(data) {
@@ -597,24 +607,52 @@ $(function() {
 			var finishTime = Date.now();
 			var showdate = new Date(finishTime).toUTCString();
 
-			M.Toast.dismissAll();
 			
-			M.toast({html: 'Finished download! at ' +  showdate, displayLength:7000, classes: 'success'});
+
+
 			logItemRaw("\nTotal elapsed time: " + new Date (finishTime - startTime).getSeconds() + " seconds")
 
-			var arryi = {1:"e",2:"e",3:"e"};
-			console.log("All of the reqs" + requests + arryi);
+			//var arryi = {1:"e",2:"e",3:"e"};
+			//console.log("All of the reqs" + requests + arryi);
+			
 
+			console.dir(requests);
+			console.dir(missedTiles)
+			console.dir(missedRequest);
+
+			if(validateDownload()){
+				M.toast({html: 'Finished download! at ' +  showdate, displayLength:7000, classes: 'success'});
+			}
+			
 
 			$("#stop-button").html("FINISH");
 		});
 
 	}
 
-	function retryDownload(){
-		
+	function validateDownload(){
 
+		M.Toast.dismissAll();
+
+		var fails = 0;
+		for (let req of requests){
+			console.log("status f req "+req.status)
+			if (req.status !== 200){
+				fails+=1;
+			}
+		}
+
+		if (fails !== 0){
+			M.toast({html: 'Download complications,'+fails+' out of '+ requests.length+' had problems Retry?' +  "<class=Button onClick={retryDownload}> Yes</>", displayLength:7000, classes: 'success'});
+			return false
+		}
+
+
+
+		return true
 	}
+
+	
 
 	function updateProgress(value, total) {
 		var progress = value / total;
