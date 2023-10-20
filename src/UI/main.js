@@ -641,14 +641,14 @@ $(function() {
 			}
 
 			//Dev testing checks all the requests, missedTiles and missedRequests
-			console.log("all the requests")
-			console.dir(requests);
-			console.log("all the missiing titles")
-			console.dir(missedTiles)
-			console.log("all the missed requests")
-			console.dir(missedRequest);
-			console.log("all the missed datas")
-			console.dir(missedData);
+			// console.log("all the requests")
+			// console.dir(requests);
+			// console.log("all the missiing titles")
+			// console.dir(missedTiles)
+			// console.log("all the missed requests")
+			// console.dir(missedRequest);
+			// console.log("all the missed datas")
+			// console.dir(missedData);
 
 			
 			
@@ -686,14 +686,28 @@ $(function() {
 		async function checkfile(data){
 			console.log("data send through checkfile");
 			console.dir(data);
+
+			checkData = 
+			{outputDirectory : $("#output-directory-box").val(),
+			outputFile : $("#output-file-box").val(),
+			outputType : $("#output-type").val(),
+			outputScale : $("#output-scale").val(),
+			minzoom : getMinZoom(),
+			maxzoom : getMaxZoom()}
+
+			console.log("data send through checkfile");
+			console.log(checkData);
+			console.dir(checkData)
+
+
 		var request = await $.ajax({
 			url: "/validate",
 			async: true,
 			timeout: 30 * 1000,
 			type: "get",
-			contentType: false,
-			processData: false,
-			data: data,
+			contentType: 'application/json; charset=utf-8',
+			processData: true,
+			data: JSON.stringify(checkData),
 			dataType: 'json',
 		}).done(function(data){
 			console.log("done function data in validate\n"+data)
