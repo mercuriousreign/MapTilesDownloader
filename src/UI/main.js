@@ -463,6 +463,8 @@ $(function() {
 
 		cancellationToken = false; 
 		requests = [];
+		missedRequest = [];
+		missedTiles = [];
 
 		$("#main-sidebar").hide();
 		$("#download-sidebar").show();

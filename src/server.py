@@ -203,7 +203,7 @@ class serverHandler(BaseHTTPRequestHandler):
             t = open(textPath, "a")
             t.write(log)
             t.close()
-            print(log)
+            print("the log isss "+log)
 
             result = {}
             result["code"] = 200
