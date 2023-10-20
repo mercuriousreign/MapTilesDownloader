@@ -129,21 +129,25 @@ class serverHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(result).encode('utf-8'))
             return
-        # Validates eachfile
+        # Validates eachfile # check = os.path.isdir(filePath)
         elif parts.path == "/validate":
-            outputDirectory = str(postvars['outputDirectory'][0])
-            outputFile = str(postvars['outputFile'][0])
-            minZoom = int(postvars['minZoom'][0])
-            maxZoom = int(postvars['maxZoom'][0])
-            values = range(minZoom, maxZoom)
+            # print("postvars in valid")
+            # print(postvars)
+            # outputDirectory = str(postvars['outputDirectory'][0])
+            # outputFile = str(postvars['outputFile'][0])
+            # minZoom = int(postvars['minZoom'][0])
+            # maxZoom = int(postvars['maxZoom'][0])
+            values = range(3, 15)
             result = {}
             result["missFiles"] = []
             result["code"] = 200
             result["message"] = 'file is valid'
             for i in values:
-                filePath = os.path.join("output", outputDirectory, outputFile)
+                filePath = os.path.join("output")
                 check = os.path.isdir(filePath)
-                print("the file path is   " + filePath)
+                print("the file path is")
+                print(outputFile)
+                print(filePath)
                 if check == False:
                     result["missTiles"].append(i)
                     result["code"] = 404

@@ -693,10 +693,10 @@ $(function() {
 			dataType: 'json',
 		}).done(function(data){
 			if(data.missFiles.length>0){
-				var toastHTML = 'Download complications, '+ data.missTiles.length +' are missing Retry?' +  '<button id="retry"  class="btn-flat toast-action"> Yes </button><button id="noretry" class="btn-flat toast-action"> No </button>';
+				var toastHTML = 'Download complications, '+ data.missTiles.length +' are missing Restart download?' +  '<button id="retry"  class="btn-flat toast-action"> Yes </button><button id="noretry" class="btn-flat toast-action"> No </button>';
 
 			M.toast({html: toastHTML, displayLength:10000, classes: 'fail'});
-			$("#retry").click(retryDownload)
+			$("#retry").click(startDownloading)
 			$("#noretry").click(function(){M.Toast.dismissAll()})
 				return false
 			}
