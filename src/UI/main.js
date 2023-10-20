@@ -634,8 +634,10 @@ $(function() {
 			
 
 			
-			if(validateDownload()){
+			if(validateDownload(data)){
 				M.toast({html: 'Finished download! at ' +  showdate, displayLength:7000, classes: 'success'});
+			} else {
+
 			}
 
 			//Dev testing checks all the requests, missedTiles and missedRequests
@@ -657,7 +659,7 @@ $(function() {
 	}
 
 	////Validates all requests has been successfull
-	function validateDownload(){
+	function validateDownload(data){
 		M.Toast.dismissAll();
 		var fails = 0;
 		// for (let req of requests){
@@ -666,7 +668,6 @@ $(function() {
 		// 		fails+=1;
 		// 	}
 		// }
-
 		
 		if (fails !== 0 || missedRequest.length >0){
 
@@ -674,12 +675,35 @@ $(function() {
 	var toastHTML = 'Download complications, '+fails+' out of '+ requests.length +' had problems Retry?' +  '<button id="retry"  class="btn-flat toast-action"> Yes </button><button id="noretry" class="btn-flat toast-action"> No </button>';
 
 			M.toast({html: toastHTML, displayLength:10000, classes: 'fail'});
-
 			$("#retry").click(retryDownload)
-			// $("#retry").click(function(){alert("testing");console.log("button clicks")})
 			$("#noretry").click(function(){M.Toast.dismissAll()})
 			return false
 		}
+
+		checkfile();
+		async function checkfile(data){
+		var request = await $.ajax({
+			url: "/end-download",
+			async: true,
+			timeout: 30 * 1000,
+			type: "post",
+			contentType: false,
+			processData: false,
+			data: data,
+			dataType: 'json',
+		}).done(function(data){
+			if(data.missFiles.length>0){
+				var toastHTML = 'Download complications, '+ data.missTiles.length +' are missing Retry?' +  '<button id="retry"  class="btn-flat toast-action"> Yes </button><button id="noretry" class="btn-flat toast-action"> No </button>';
+
+			M.toast({html: toastHTML, displayLength:10000, classes: 'fail'});
+			$("#retry").click(retryDownload)
+			$("#noretry").click(function(){M.Toast.dismissAll()})
+				return false
+			}
+		})
+	}
+		// var fs = require('fs')
+		// var files = fs.read
 
 
 

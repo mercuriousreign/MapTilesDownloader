@@ -129,7 +129,26 @@ class serverHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(result).encode('utf-8'))
             return
-
+        # Validates eachfile
+        elif parts.path == "/validate":
+            outputDirectory = str(postvars['outputDirectory'][0])
+            outputFile = str(postvars['outputFile'][0])
+            minZoom = int(postvars['minZoom'][0])
+            maxZoom = int(postvars['maxZoom'][0])
+            values = range(minZoom, maxZoom)
+            result = {}
+            result["missFiles"] = []
+            result["code"] = 200
+            result["message"] = 'file is valid'
+            for i in values:
+                filePath = os.path.join("output", outputDirectory, outputFile)
+                check = os.path.isdir(filePath)
+                print("the file path is   " + filePath)
+                if check == False:
+                    result["missTiles"].append(i)
+                    result["code"] = 404
+                    result["message"] = 'file is missing'
+            return
         #### Start writing the metadata.json####
         elif parts.path == '/start-download':
             outputType = str(postvars['outputType'][0])
