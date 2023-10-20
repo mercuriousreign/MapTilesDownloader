@@ -602,6 +602,8 @@ $(function() {
 			requests.push(request);
 
 		}, async function(err) {
+			
+			data.append("log",$('#log-view').val)
 
 			var request = await $.ajax({
 				url: "/end-download",

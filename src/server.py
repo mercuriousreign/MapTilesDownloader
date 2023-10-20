@@ -23,7 +23,7 @@ import ssl
 import glob
 import os
 import base64
-import mimetypes 
+import mimetypes
 
 from file_writer import FileWriter
 from mbtiles_writer import MbtilesWriter
@@ -32,205 +32,223 @@ from utils import Utils
 
 lock = threading.Lock()
 
+
 class serverHandler(BaseHTTPRequestHandler):
-		
-	def randomString(self):
-		return uuid.uuid4().hex.upper()[0:6]
 
-	def writerByType(self, type):
-		if(type == "mbtiles"):
-			return MbtilesWriter
-		elif(type == "repo"):
-			return RepoWriter
-		elif(type == "directory"):
-			return FileWriter
+    def randomString(self):
+        return uuid.uuid4().hex.upper()[0:6]
 
-	def do_POST(self):
+    def writerByType(self, type):
+        if (type == "mbtiles"):
+            return MbtilesWriter
+        elif (type == "repo"):
+            return RepoWriter
+        elif (type == "directory"):
+            return FileWriter
 
-		ctype, pdict = cgi.parse_header(self.headers.get('Content-Type'))
-		#ctype, pdict = cgi.parse_header(self.headers['content-type'])
-		pdict['boundary'] = bytes(pdict['boundary'], "utf-8")
-				
-		content_len = int(self.headers.get('Content-length'))
-		pdict['CONTENT-LENGTH'] = content_len
+    def do_POST(self):
 
-		postvars = cgi.parse_multipart(self.rfile, pdict)
+        ctype, pdict = cgi.parse_header(self.headers.get('Content-Type'))
+        # ctype, pdict = cgi.parse_header(self.headers['content-type'])
+        pdict['boundary'] = bytes(pdict['boundary'], "utf-8")
 
-		parts = urlparse(self.path)
-		if parts.path == '/download-tile':
+        content_len = int(self.headers.get('Content-length'))
+        pdict['CONTENT-LENGTH'] = content_len
 
-			x = int(postvars['x'][0])
-			y = int(postvars['y'][0])
-			z = int(postvars['z'][0])
-			quad = str(postvars['quad'][0])
-			timestamp = int(postvars['timestamp'][0])
-			outputDirectory = str(postvars['outputDirectory'][0])
-			outputFile = str(postvars['outputFile'][0])
-			outputType = str(postvars['outputType'][0])
-			outputScale = int(postvars['outputScale'][0])
-			source = str(postvars['source'][0])
+        postvars = cgi.parse_multipart(self.rfile, pdict)
 
-			replaceMap = {
-				"x": str(x),
-				"y": str(y),
-				"z": str(z),
-				"quad": quad,
-				"timestamp": str(timestamp),
-			}
+        parts = urlparse(self.path)
+        if parts.path == '/download-tile':
 
-			for key, value in replaceMap.items():
-				newKey = str("{" + str(key) + "}")
-				outputDirectory = outputDirectory.replace(newKey, value)
-				outputFile = outputFile.replace(newKey, value)
+            x = int(postvars['x'][0])
+            y = int(postvars['y'][0])
+            z = int(postvars['z'][0])
+            quad = str(postvars['quad'][0])
+            timestamp = int(postvars['timestamp'][0])
+            outputDirectory = str(postvars['outputDirectory'][0])
+            outputFile = str(postvars['outputFile'][0])
+            outputType = str(postvars['outputType'][0])
+            outputScale = int(postvars['outputScale'][0])
+            source = str(postvars['source'][0])
 
-			result = {}
+            replaceMap = {
+                "x": str(x),
+                "y": str(y),
+                "z": str(z),
+                "quad": quad,
+                "timestamp": str(timestamp),
+            }
 
-			filePath = os.path.join("output", outputDirectory, outputFile)
+            for key, value in replaceMap.items():
+                newKey = str("{" + str(key) + "}")
+                outputDirectory = outputDirectory.replace(newKey, value)
+                outputFile = outputFile.replace(newKey, value)
 
-			print("\n")
+            result = {}
 
-			if self.writerByType(outputType).exists(filePath, x, y, z):
-				result["code"] = 200
-				result["message"] = 'Tile already exists'
+            filePath = os.path.join("output", outputDirectory, outputFile)
 
-				print("EXISTS: " + filePath)
+            print("\n")
 
-			else:
+            if self.writerByType(outputType).exists(filePath, x, y, z):
+                result["code"] = 200
+                result["message"] = 'Tile already exists'
 
-				tempFile = self.randomString() + ".png"
-				tempFilePath = os.path.join("temp", tempFile)
+                print("EXISTS: " + filePath)
 
-				result["code"] = Utils.downloadFileScaled(source, tempFilePath, x, y, z, outputScale)
+            else:
 
-				print("HIT: " + source + "\n" + "RETURN: " + str(result["code"]))
+                tempFile = self.randomString() + ".png"
+                tempFilePath = os.path.join("temp", tempFile)
 
-				if os.path.isfile(tempFilePath):
-					self.writerByType(outputType).addTile(lock, filePath, tempFilePath, x, y, z, outputScale)
+                result["code"] = Utils.downloadFileScaled(
+                    source, tempFilePath, x, y, z, outputScale)
 
-					with open(tempFilePath, "rb") as image_file:
-						result["image"] = base64.b64encode(image_file.read()).decode("utf-8")
+                print("HIT: " + source + "\n" +
+                      "RETURN: " + str(result["code"]))
 
-					os.remove(tempFilePath)
+                if os.path.isfile(tempFilePath):
+                    self.writerByType(outputType).addTile(
+                        lock, filePath, tempFilePath, x, y, z, outputScale)
 
-					result["message"] = 'Tile Downloaded'
-					print("SAVE: " + filePath)
+                    with open(tempFilePath, "rb") as image_file:
+                        result["image"] = base64.b64encode(
+                            image_file.read()).decode("utf-8")
 
-				else:
-					result["message"] = 'Download failed'
+                    os.remove(tempFilePath)
+
+                    result["message"] = 'Tile Downloaded'
+                    print("SAVE: " + filePath)
+
+                else:
+                    result["message"] = 'Download failed'
+
+            self.send_response(200)
+            # self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(result).encode('utf-8'))
+            return
+
+        #### Start writing the metadata.json####
+        elif parts.path == '/start-download':
+            outputType = str(postvars['outputType'][0])
+            outputScale = int(postvars['outputScale'][0])
+            outputDirectory = str(postvars['outputDirectory'][0])
+            outputFile = str(postvars['outputFile'][0])
+            minZoom = int(postvars['minZoom'][0])
+            maxZoom = int(postvars['maxZoom'][0])
+            timestamp = int(postvars['timestamp'][0])
+            bounds = str(postvars['bounds'][0])
+            boundsArray = map(float, bounds.split(","))
+            center = str(postvars['center'][0])
+            centerArray = map(float, center.split(","))
+
+            replaceMap = {
+                "timestamp": str(timestamp),
+            }
+
+            for key, value in replaceMap.items():
+                newKey = str("{" + str(key) + "}")
+                outputDirectory = outputDirectory.replace(newKey, value)
+                outputFile = outputFile.replace(newKey, value)
+
+            filePath = os.path.join("output", outputDirectory, outputFile)
+
+            self.writerByType(outputType).addMetadata(lock, os.path.join("output", outputDirectory), filePath, outputFile,
+                                                      "Map Tiles Downloader via AliFlux", "png", boundsArray, centerArray, minZoom, maxZoom, "mercator", 256 * outputScale)
+
+            result = {}
+            result["code"] = 200
+            result["message"] = 'Metadata written'
+
+            self.send_response(200)
+            # self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(result).encode('utf-8'))
+            return
+
+        # Closes the  the last json file
+
+        elif parts.path == '/end-download':
+            outputType = str(postvars['outputType'][0])
+            outputScale = int(postvars['outputScale'][0])
+            outputDirectory = str(postvars['outputDirectory'][0])
+            outputFile = str(postvars['outputFile'][0])
+            minZoom = int(postvars['minZoom'][0])
+            maxZoom = int(postvars['maxZoom'][0])
+            timestamp = int(postvars['timestamp'][0])
+            bounds = str(postvars['bounds'][0])
+            boundsArray = map(float, bounds.split(","))
+            center = str(postvars['center'][0])
+            centerArray = map(float, center.split(","))
+            log = str(postvars['log'][0])
+
+            replaceMap = {
+                "timestamp": str(timestamp),
+            }
+
+            for key, value in replaceMap.items():
+                newKey = str("{" + str(key) + "}")
+                outputDirectory = outputDirectory.replace(newKey, value)
+                outputFile = outputFile.replace(newKey, value)
+
+            filePath = os.path.join("output", outputDirectory, outputFile)
+
+            self.writerByType(outputType).close(lock, os.path.join(
+                "output", outputDirectory), filePath, minZoom, maxZoom)
+
+            textPath = os.path.join("output", outputDirectory, "log.txt")
+            t = open(textPath, "a")
+            t.write(log)
+            t.close()
+            print(log)
+
+            result = {}
+            result["code"] = 200
+            result["message"] = 'Downloaded ended'
+
+            self.send_response(200)
+            # self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(result).encode('utf-8'))
+            return
+
+    def do_GET(self):
+
+        parts = urlparse(self.path)
+        path = parts.path.strip('/')
+        if path == "":
+            path = "index.htm"
+
+        file = os.path.join("./UI/", path)
+        mime = mimetypes.MimeTypes().guess_type(file)[0]
+
+        self.send_response(200)
+        # self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Content-Type", mime)
+        self.end_headers()
+
+        with open(file, "rb") as f:
+            self.wfile.write(f.read())
 
 
-			self.send_response(200)
-			# self.send_header("Access-Control-Allow-Origin", "*")
-			self.send_header("Content-Type", "application/json")
-			self.end_headers()
-			self.wfile.write(json.dumps(result).encode('utf-8'))
-			return
-			
-		elif parts.path == '/start-download':
-			outputType = str(postvars['outputType'][0])
-			outputScale = int(postvars['outputScale'][0])
-			outputDirectory = str(postvars['outputDirectory'][0])
-			outputFile = str(postvars['outputFile'][0])
-			minZoom = int(postvars['minZoom'][0])
-			maxZoom = int(postvars['maxZoom'][0])
-			timestamp = int(postvars['timestamp'][0])
-			bounds = str(postvars['bounds'][0])
-			boundsArray = map(float, bounds.split(","))
-			center = str(postvars['center'][0])
-			centerArray = map(float, center.split(","))
-
-			replaceMap = {
-				"timestamp": str(timestamp),
-			}
-
-			for key, value in replaceMap.items():
-				newKey = str("{" + str(key) + "}")
-				outputDirectory = outputDirectory.replace(newKey, value)
-				outputFile = outputFile.replace(newKey, value)
-
-			filePath = os.path.join("output", outputDirectory, outputFile)
-
-			self.writerByType(outputType).addMetadata(lock, os.path.join("output", outputDirectory), filePath, outputFile, "Map Tiles Downloader via AliFlux", "png", boundsArray, centerArray, minZoom, maxZoom, "mercator", 256 * outputScale)
-
-			result = {}
-			result["code"] = 200
-			result["message"] = 'Metadata written'
-
-			self.send_response(200)
-			# self.send_header("Access-Control-Allow-Origin", "*")
-			self.send_header("Content-Type", "application/json")
-			self.end_headers()
-			self.wfile.write(json.dumps(result).encode('utf-8'))
-			return
-			
-		elif parts.path == '/end-download':
-			outputType = str(postvars['outputType'][0])
-			outputScale = int(postvars['outputScale'][0])
-			outputDirectory = str(postvars['outputDirectory'][0])
-			outputFile = str(postvars['outputFile'][0])
-			minZoom = int(postvars['minZoom'][0])
-			maxZoom = int(postvars['maxZoom'][0])
-			timestamp = int(postvars['timestamp'][0])
-			bounds = str(postvars['bounds'][0])
-			boundsArray = map(float, bounds.split(","))
-			center = str(postvars['center'][0])
-			centerArray = map(float, center.split(","))
-
-			replaceMap = {
-				"timestamp": str(timestamp),
-			}
-
-			for key, value in replaceMap.items():
-				newKey = str("{" + str(key) + "}")
-				outputDirectory = outputDirectory.replace(newKey, value)
-				outputFile = outputFile.replace(newKey, value)
-
-			filePath = os.path.join("output", outputDirectory, outputFile)
-
-			self.writerByType(outputType).close(lock, os.path.join("output", outputDirectory), filePath, minZoom, maxZoom)
-
-			result = {}
-			result["code"] = 200
-			result["message"] = 'Downloaded ended'
-
-			self.send_response(200)
-			# self.send_header("Access-Control-Allow-Origin", "*")
-			self.send_header("Content-Type", "application/json")
-			self.end_headers()
-			self.wfile.write(json.dumps(result).encode('utf-8'))
-			return
-
-	def do_GET(self):
-
-
-		parts = urlparse(self.path)
-		path = parts.path.strip('/')
-		if path == "":
-			path = "index.htm"
-
-		file = os.path.join("./UI/", path)
-		mime = mimetypes.MimeTypes().guess_type(file)[0] 
-
-		self.send_response(200)
-		# self.send_header("Access-Control-Allow-Origin", "*")
-		self.send_header("Content-Type", mime)
-		self.end_headers()
-		
-		with open(file, "rb") as f:
-			self.wfile.write(f.read())
-		
 class serverThreadedHandler(ThreadingMixIn, HTTPServer):
-	"""Handle requests in a separate thread."""
+    """Handle requests in a separate thread."""
+
 
 def run():
-	print('Starting Server...')
-	server_address = ('', 8080)
-	httpd = serverThreadedHandler(server_address, serverHandler)
-	print('Running Server...')
+    print('Starting Server...')
+    server_address = ('', 8080)
+    httpd = serverThreadedHandler(server_address, serverHandler)
+    print('Running Server...')
 
-	# os.startfile('UI\\index.htm', 'open')
-	print("Open http://localhost:8080/ to view the application.")
+    # os.startfile('UI\\index.htm', 'open')
+    print("Open http://localhost:8080/ to view the application.")
 
-	httpd.serve_forever()
- 
+    httpd.serve_forever()
+
+
 run()
