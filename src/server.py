@@ -183,7 +183,7 @@ class serverHandler(BaseHTTPRequestHandler):
             boundsArray = map(float, bounds.split(","))
             center = str(postvars['center'][0])
             centerArray = map(float, center.split(","))
-            log = str(postvars['log'][0])
+            logger = str(postvars['log'][0])
 
             replaceMap = {
                 "timestamp": str(timestamp),
@@ -201,9 +201,9 @@ class serverHandler(BaseHTTPRequestHandler):
 
             textPath = os.path.join("output", outputDirectory, "log.txt")
             t = open(textPath, "a")
-            t.write(log)
+            t.write(logger)
             t.close()
-            print("the log isss "+log)
+            print("the log isss "+logger)
 
             result = {}
             result["code"] = 200

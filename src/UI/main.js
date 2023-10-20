@@ -18,6 +18,8 @@ $(function() {
 	
 	var missedTiles = []; //Draft array to insert tiles that were missed;
 
+	var missedData = [];//
+
 	//Contains all different sources to download map from, has variable that takes mapbox's information (quad,x,y,z).
 
 	var sources = {
@@ -465,6 +467,7 @@ $(function() {
 		requests = [];
 		missedRequest = [];
 		missedTiles = [];
+		missedData = [];
 
 		$("#main-sidebar").hide();
 		$("#download-sidebar").show();
@@ -558,7 +561,7 @@ $(function() {
 			    processData: false,
 				data: data,
 				dataType: 'json',
-			}).done(function(data) {
+			}).done(function(data) { ///this is where tile is being taken from
 
 				if(cancellationToken) {
 					return;
@@ -569,10 +572,11 @@ $(function() {
 					showTinyTile(data.image)
 					logItem(item.x, item.y, item.z, data.message);
 				} else {
-					logItem(item.x, item.y, item.z, data.code + " Error downloading tile");
+					logItem(item.x, item.y, item.z, data.code + " Error downloading tile, code is : " + data.code);
 
 					missedTiles.push(item);
 					missedRequest.push(self);
+					missedData.push(data);
 
 				}
 
@@ -585,6 +589,7 @@ $(function() {
 				logItem(item.x, item.y, item.z, "Error while relaying tile");
 				missedTiles.push(item);
 				missedRequest.push(self);
+				missedData.push(data);
 				//allTiles.push(item);
 
 			}).always(function(data) {
@@ -604,8 +609,15 @@ $(function() {
 			requests.push(request);
 
 		}, async function(err) {
+
+
+			logItemRaw("\nAll requests are done!");
+			var finishTime = Date.now();
+			var showdate = new Date(finishTime).toUTCString();
+
+			logItemRaw("\nTotal elapsed time: " + new Date (finishTime - startTime).getSeconds() + " seconds")
 			
-			data.append("log",$('#log-view').val)
+			data.append("log",$('#log-view').val())
 
 			var request = await $.ajax({
 				url: "/end-download",
@@ -619,17 +631,12 @@ $(function() {
 			})
 
 			updateProgress(allTiles.length, allTiles.length);
-			logItemRaw("\nAll requests are done!");
-			var finishTime = Date.now();
-			var showdate = new Date(finishTime).toUTCString();
-
 			
 
-
-			logItemRaw("\nTotal elapsed time: " + new Date (finishTime - startTime).getSeconds() + " seconds")
-
 			
-			
+			if(validateDownload()){
+				M.toast({html: 'Finished download! at ' +  showdate, displayLength:7000, classes: 'success'});
+			}
 
 			//Dev testing checks all the requests, missedTiles and missedRequests
 			console.log("all the requests")
@@ -638,10 +645,10 @@ $(function() {
 			console.dir(missedTiles)
 			console.log("all the missed requests")
 			console.dir(missedRequest);
+			console.log("all the missed datas")
+			console.dir(missedData);
 
-			if(validateDownload()){
-				M.toast({html: 'Finished download! at ' +  showdate, displayLength:7000, classes: 'success'});
-			}
+			
 			
 
 			$("#stop-button").html("FINISH");
@@ -651,24 +658,22 @@ $(function() {
 
 	////Validates all requests has been successfull
 	function validateDownload(){
-
 		M.Toast.dismissAll();
-
 		var fails = 0;
-		for (let req of requests){
-			console.log("status f req "+req.status)
-			if (req.status !== 200){
-				fails+=1;
-			}
-		}
+		// for (let req of requests){
+		// 	console.log("status f req "+req.status)
+		// 	if (req.status !== 200){
+		// 		fails+=1;
+		// 	}
+		// }
 
 		
-		if (fails !== 0){
+		if (fails !== 0 || missedRequest.length >0){
 
 
 	var toastHTML = 'Download complications, '+fails+' out of '+ requests.length +' had problems Retry?' +  '<button id="retry"  class="btn-flat toast-action"> Yes </button><button id="noretry" class="btn-flat toast-action"> No </button>';
 
-			M.toast({html: toastHTML, displayLength:8000, classes: 'fail'});
+			M.toast({html: toastHTML, displayLength:10000, classes: 'fail'});
 
 			$("#retry").click(retryDownload)
 			// $("#retry").click(function(){alert("testing");console.log("button clicks")})
@@ -685,6 +690,7 @@ $(function() {
 	function retryDownload(){
 
 		var i = 0
+		var numThreads = parseInt($("#parallel-threads-box").val());
 		var iterator = async.eachLimit(missedTiles, numThreads, function(item, done) {
 
 			if(cancellationToken) {
