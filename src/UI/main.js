@@ -697,6 +697,7 @@ $(function() {
 			dataType: 'json',
 		}).done(function(data){
 			console.log("done function data in validate\n"+data)
+			console.dir(data)
 			if(data.missFiles.length>0){
 				var toastHTML = 'Download complications, '+ data.missTiles.length +' are missing Restart download?' +  '<button id="retry"  class="btn-flat toast-action"> Yes </button><button id="noretry" class="btn-flat toast-action"> No </button>';
 

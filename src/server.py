@@ -271,11 +271,16 @@ class serverHandler(BaseHTTPRequestHandler):
 
                 print(filePath)
                 if check == False:
-                    result["missTiles"].append(i)
+                    result["missFiles"].append(i)
                     result["code"] = 404
                     result["message"] = 'file is missing'
             # return result
-            self.send_response(result)
+            self.send_response(result["code"], result["message"])
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(
+                {"missTiles": result["missFiles"]}).encode('utf-8'))
+            return
 
         file = os.path.join("./UI/", path)
         mime = mimetypes.MimeTypes().guess_type(file)[0]
