@@ -245,6 +245,37 @@ class serverHandler(BaseHTTPRequestHandler):
         path = parts.path.strip('/')
         if path == "":
             path = "index.htm"
+        if parts.path == "/validate":
+            print("just parts")
+            print(parts)
+            print("just path")
+            print(path)
+            print("just parts.path")
+            print(parts.path)
+            print("the params from parts.path")
+            print(parts.params)
+            # print(postvars)
+            # outputDirectory = str(postvars['outputDirectory'][0])
+            # outputFile = str(postvars['outputFile'][0])
+            # minZoom = int(postvars['minZoom'][0])
+            # maxZoom = int(postvars['maxZoom'][0])
+            values = range(3, 15)
+            result = {}
+            result["missFiles"] = []
+            result["code"] = 200
+            result["message"] = 'file is valid'
+            for i in values:
+                filePath = os.path.join("output")
+                check = os.path.isdir(filePath)
+                print("the file path is")
+
+                print(filePath)
+                if check == False:
+                    result["missTiles"].append(i)
+                    result["code"] = 404
+                    result["message"] = 'file is missing'
+            # return result
+            self.send_response(result)
 
         file = os.path.join("./UI/", path)
         mime = mimetypes.MimeTypes().guess_type(file)[0]

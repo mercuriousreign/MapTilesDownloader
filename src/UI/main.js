@@ -680,18 +680,23 @@ $(function() {
 			return false
 		}
 
-		checkfile();
+		console.log("the data mayb e idk");
+		console.dir(data)
+		checkfile(data);
 		async function checkfile(data){
+			console.log("data send through checkfile");
+			console.dir(data);
 		var request = await $.ajax({
-			url: "/end-download",
+			url: "/validate",
 			async: true,
 			timeout: 30 * 1000,
-			type: "post",
+			type: "get",
 			contentType: false,
 			processData: false,
 			data: data,
 			dataType: 'json',
 		}).done(function(data){
+			console.log("done function data in validate\n"+data)
 			if(data.missFiles.length>0){
 				var toastHTML = 'Download complications, '+ data.missTiles.length +' are missing Restart download?' +  '<button id="retry"  class="btn-flat toast-action"> Yes </button><button id="noretry" class="btn-flat toast-action"> No </button>';
 
