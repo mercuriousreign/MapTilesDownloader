@@ -491,6 +491,8 @@ $(function() {
 
 		M.toast({html: toastHTML, displayLength:9000, classes: 'start'});
 
+		logItemRaw("Starting download! at : " + showTime +"\n");
+
 		var numThreads = parseInt($("#parallel-threads-box").val());
 		var outputDirectory = $("#output-directory-box").val();
 		var outputFile = $("#output-file-box").val();
@@ -672,10 +674,10 @@ $(function() {
 		if (fails !== 0 || missedRequest.length >0){
 
 
-	var toastHTML = 'Download complications, '+fails+' out of '+ requests.length +' had problems Retry?' +  '<button id="retry"  class="btn-flat toast-action"> Yes </button><button id="noretry" class="btn-flat toast-action"> No </button>';
+	var toastHTML = 'Download complications, '+missedRequest.length+' out of '+ requests.length +' had problems Retry?' +  '<button id="retry"  class="btn-flat toast-action"> Yes </button><button id="noretry" class="btn-flat toast-action"> No </button>';
 
 			M.toast({html: toastHTML, displayLength:10000, classes: 'fail'});
-			$("#retry").click(retryDownload)
+			$("#retry").click(function(){retryDownload(data)})
 			$("#noretry").click(function(){M.Toast.dismissAll()})
 			return false
 		}
@@ -697,13 +699,10 @@ $(function() {
 
 
 			checkData = 
-			{outputDirectory : $("#output-directory-box").val(),
-			outputFile : $("#output-file-box").val(),
-			outputType : $("#output-type").val(),
-			outputScale : $("#output-scale").val(),
+			{
 			timestamp : data.get("timestamp"),
-			minzoom : getMinZoom(),
-			maxzoom : getMaxZoom(),
+			minZoom : getMinZoom(),
+			maxZoom : getMaxZoom(),
 			total:totalTiles}
 
 			console.log("data send through checkfile");
@@ -738,10 +737,29 @@ $(function() {
 	}
 
 	////A retryfunction to download all the missed tiles****
-	function retryDownload(){
+	function retryDownload(oldData){
+
+requests=[];
+		var startTime = Date.now(); 
+		var showTime = new Date(startTime).toUTCString();
+		var toastHTML= '<div class="sometexts" style="flex-direction : column">Starting download! at : ' + showTime +'<div class="progress"><div class="indeterminate"></div></div></div>';
+
+		M.toast({html: toastHTML, displayLength:9000, classes: 'start'});
+
+		logItemRaw("Starting download! at : " + showTime +"\n");
 
 		var i = 0
+
 		var numThreads = parseInt($("#parallel-threads-box").val());
+		var outputDirectory = $("#output-directory-box").val();
+		var outputFile = $("#output-file-box").val();
+		var outputType = $("#output-type").val();
+		var outputScale = $("#output-scale").val();
+		var source = $("#source-box").val()
+		var bounds = getBounds();
+		var boundsArray = [bounds.getSouthWest().lng, bounds.getSouthWest().lat, bounds.getNorthEast().lng, bounds.getNorthEast().lat]
+		var centerArray = [bounds.getCenter().lng, bounds.getCenter().lat, getMaxZoom()]
+
 		var iterator = async.eachLimit(missedTiles, numThreads, function(item, done) {
 
 			if(cancellationToken) {
@@ -761,7 +779,7 @@ $(function() {
 			data.append('outputFile', outputFile)
 			data.append('outputType', outputType)
 			data.append('outputScale', outputScale)
-			data.append('timestamp', timestamp)
+			data.append('timestamp', oldData.get("timestamp"))
 			data.append('source', source)
 			data.append('bounds', boundsArray.join(","))
 			data.append('center', centerArray.join(","))
@@ -816,7 +834,7 @@ $(function() {
 				i++;
 
 				removeLayer(boxLayer);
-				updateProgress(i, allTiles.length);
+				updateProgress(i, missedTiles.length);
 
 				done();
 				
@@ -837,7 +855,7 @@ $(function() {
 				type: "post",
 				contentType: false,
 				processData: false,
-				data: data,
+				data: oldData,
 				dataType: 'json',
 			})
 
@@ -866,6 +884,7 @@ $(function() {
 			}
 
 
+			
 			$("#stop-button").html("FINISH");
 		});
 

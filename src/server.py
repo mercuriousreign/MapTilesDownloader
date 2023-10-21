@@ -256,8 +256,8 @@ class serverHandler(BaseHTTPRequestHandler):
             query_string = parts.query.replace('%22', '"')
             storQue = json.loads(query_string)
 
-            minzoom = storQue["minzoom"]
-            maxzoom = storQue["maxzoom"]
+            minzoom = storQue["minZoom"]
+            maxzoom = storQue["maxZoom"]
             # outputDirectory = storQue["outputDirectory"]
             timestamp = storQue["timestamp"]
             total = storQue["total"]
