@@ -252,31 +252,14 @@ class serverHandler(BaseHTTPRequestHandler):
         if path == "":
             path = "index.htm"
         if parts.path == "/validate":
-            # content_length = int(self.headers['Content-Length'])
-            # post_data = self.rfile.read(content_length)
-            # Parse the JSON data
-           # data = json.loads(post_data)
-            # Use the data for your functions
-            # print('Received JSON data:', data)
-            # query_params = self.parse_query_string(self.path)
-            # print('Received query parameters:', query_params)
-            # print("just parts")
-            # print(parts)
-            # print("just parts.path")
-            # print(parts.path)
-            # print("the query parsing from parts.query")
-            # print(parts.query)
-            # print("the storQue replacing")
+
             query_string = parts.query.replace('%22', '"')
             storQue = json.loads(query_string)
-            # print("the storQue")
-            # print(storQue)
-            # print("the storQue Val minzoom")
-            # print(storQue["minzoom"])
+
             minzoom = storQue["minzoom"]
             maxzoom = storQue["maxzoom"]
             outputDirectory = storQue["outputDirectory"]
-            total = storQue["totalTiles"]
+            total = storQue["total"]
             values = range(minzoom, maxzoom)
             result = {}
             result["missFiles"] = []
@@ -291,23 +274,26 @@ class serverHandler(BaseHTTPRequestHandler):
                 if check == False:
                     result["missFiles"].append(i)
                     result["code"] = 404
-                    result["message"] = 'file is missing'
+                    result["message"] = 'file is missing at path ' + filePath
 
             # check by last directory
             lastFolder = max(pathlib.Path("output").glob(
                 '*/'), key=os.path.getmtime)
-            for root_dir, cur_dir, files in os.walk("output"):
+
+            count = 0
+            for root_dir, cur_dir, files in os.walk(lastFolder):
                 count += len(files)
             if (count-2) != total:
                 result["code"] = 404
-                result["message"] = 'file is missing'
+                result["message"] = 'file is missing by count ' + \
+                    str(count-2) + ' out of ' + str(total)
 
             # return result
             self.send_response(result["code"], result["message"])
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps(
-                {"missTiles": result["missFiles"]}).encode('utf-8'))
+                {"missFiles": result["missFiles"]}).encode('utf-8'))
             return
 
         file = os.path.join("./UI/", path)
