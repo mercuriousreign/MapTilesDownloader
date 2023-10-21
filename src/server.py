@@ -24,6 +24,7 @@ import glob
 import os
 import base64
 import mimetypes
+import pathlib
 
 from file_writer import FileWriter
 from mbtiles_writer import MbtilesWriter
@@ -152,6 +153,11 @@ class serverHandler(BaseHTTPRequestHandler):
                     result["missTiles"].append(i)
                     result["code"] = 404
                     result["message"] = 'file is missing'
+            self.send_response(200)
+            # self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(result).encode('utf-8'))
             return
         #### Start writing the metadata.json####
         elif parts.path == '/start-download':
@@ -254,48 +260,48 @@ class serverHandler(BaseHTTPRequestHandler):
             # print('Received JSON data:', data)
             # query_params = self.parse_query_string(self.path)
             # print('Received query parameters:', query_params)
-            print("just parts")
-            print(parts)
-            print("just parts.path")
-            print(parts.path)
-            print("the query parsing from parts.query")
-            print(parts.query)
-            print("the storQue replacing")
-            query_string = parts.query.replace('%22', '"')
-            storQue = json.loads(query_string)
-            print("the storQue")
-            print(storQue)
-            print("the storQue Val minzoom")
-            print(storQue["minzoom"])
-
-            # query_params = self.parse_query_string(self.path)
-            # print('Received query parameters:', query_params)
-            # print("just path")
-            # print(path)
+            # print("just parts")
+            # print(parts)
             # print("just parts.path")
             # print(parts.path)
-            # print("the params from parts.path")
-            # print(parts.params)
-            # print(postvars)
-            # outputDirectory = str(postvars['outputDirectory'][0])
-            # outputFile = str(postvars['outputFile'][0])
-            # minZoom = int(postvars['minZoom'][0])
-            # maxZoom = int(postvars['maxZoom'][0])
-            values = range(3, 15)
+            # print("the query parsing from parts.query")
+            # print(parts.query)
+            # print("the storQue replacing")
+            query_string = parts.query.replace('%22', '"')
+            storQue = json.loads(query_string)
+            # print("the storQue")
+            # print(storQue)
+            # print("the storQue Val minzoom")
+            # print(storQue["minzoom"])
+            minzoom = storQue["minzoom"]
+            maxzoom = storQue["maxzoom"]
+            outputDirectory = storQue["outputDirectory"]
+            total = storQue["totalTiles"]
+            values = range(minzoom, maxzoom)
             result = {}
             result["missFiles"] = []
             result["code"] = 200
             result["message"] = 'file is valid'
+            # check if directory exists
             for i in values:
-                filePath = os.path.join("output")
+                filePath = os.path.join("output", outputDirectory, i)
                 check = os.path.isdir(filePath)
                 print("the file path is")
-
                 print(filePath)
                 if check == False:
                     result["missFiles"].append(i)
                     result["code"] = 404
                     result["message"] = 'file is missing'
+
+            # check by last directory
+            lastFolder = max(pathlib.Path("output").glob(
+                '*/'), key=os.path.getmtime)
+            for root_dir, cur_dir, files in os.walk("output"):
+                count += len(files)
+            if (count-2) != total:
+                result["code"] = 404
+                result["message"] = 'file is missing'
+
             # return result
             self.send_response(result["code"], result["message"])
             self.send_header("Content-Type", "application/json")

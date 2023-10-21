@@ -686,6 +686,7 @@ $(function() {
 		async function checkfile(data){
 			console.log("data send through checkfile");
 			console.dir(data);
+			var totalTiles = getAllGridTiles().length;
 
 			checkData = 
 			{outputDirectory : $("#output-directory-box").val(),
@@ -693,7 +694,8 @@ $(function() {
 			outputType : $("#output-type").val(),
 			outputScale : $("#output-scale").val(),
 			minzoom : getMinZoom(),
-			maxzoom : getMaxZoom()}
+			maxzoom : getMaxZoom(),
+			total:totalTiles}
 
 			console.log("data send through checkfile");
 			console.log(checkData);
