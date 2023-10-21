@@ -681,18 +681,27 @@ $(function() {
 		}
 
 		console.log("the data mayb e idk");
+		console.log(data.get("timestamp"))
 		console.dir(data)
 		checkfile(data);
 		async function checkfile(data){
 			console.log("data send through checkfile");
 			console.dir(data);
 			var totalTiles = getAllGridTiles().length;
+			console.log("Checking outputdir through dir");
+			outputDir = $("#output-directory-box").val();
+			console.dir(outputDir);
+			console.log("checking to see if can see inside object")
+			console.log(($("#output-directory-box").val())[0])
+
+
 
 			checkData = 
 			{outputDirectory : $("#output-directory-box").val(),
 			outputFile : $("#output-file-box").val(),
 			outputType : $("#output-type").val(),
 			outputScale : $("#output-scale").val(),
+			timestamp : data.get("timestamp"),
 			minzoom : getMinZoom(),
 			maxzoom : getMaxZoom(),
 			total:totalTiles}
@@ -724,11 +733,7 @@ $(function() {
 			}
 		})
 	}
-		// var fs = require('fs')
-		// var files = fs.read
-
-
-
+		
 		return true
 	}
 

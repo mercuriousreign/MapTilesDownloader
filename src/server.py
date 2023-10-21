@@ -258,7 +258,8 @@ class serverHandler(BaseHTTPRequestHandler):
 
             minzoom = storQue["minzoom"]
             maxzoom = storQue["maxzoom"]
-            outputDirectory = storQue["outputDirectory"]
+            # outputDirectory = storQue["outputDirectory"]
+            timestamp = storQue["timestamp"]
             total = storQue["total"]
             values = range(minzoom, maxzoom)
             result = {}
@@ -267,7 +268,7 @@ class serverHandler(BaseHTTPRequestHandler):
             result["message"] = 'file is valid'
             # check if directory exists
             for i in values:
-                filePath = os.path.join("output", outputDirectory, i)
+                filePath = os.path.join("output", timestamp, str(i))
                 check = os.path.isdir(filePath)
                 print("the file path is")
                 print(filePath)
