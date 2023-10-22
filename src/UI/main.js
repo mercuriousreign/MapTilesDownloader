@@ -218,7 +218,7 @@ $(function() {
 	}
 
 
-	//Is this the actual image?
+	//Gets the bounds of the tile
 	function getTileRect(x, y, zoom) {
 
 		var c1 = new mapboxgl.LngLat(tile2long(x, zoom), tile2lat(y, zoom));
@@ -328,6 +328,7 @@ $(function() {
 		return allTiles;
 	}
 
+	//<-- Function related to grid
 	function removeGrid() {
 		removeLayer("grid-preview");
 	}
@@ -456,6 +457,7 @@ $(function() {
 		strip.prepend(image)
 	}
 
+	//Sends request to start downlooad
 	async function startDownloading() {
 
 		if(draw.getAll().features.length == 0) {
@@ -645,17 +647,6 @@ $(function() {
 
 			}
 
-			//Dev testing checks all the requests, missedTiles and missedRequests
-			// console.log("all the requests")
-			// console.dir(requests);
-			// console.log("all the missiing titles")
-			// console.dir(missedTiles)
-			// console.log("all the missed requests")
-			// console.dir(missedRequest);
-			// console.log("all the missed datas")
-			// console.dir(missedData);
-
-			
 			
 
 			$("#stop-button").html("FINISH");
@@ -663,7 +654,7 @@ $(function() {
 
 	}
 
-	////Validates all requests has been successfull
+	////**Validates all requests has been successfull
 	function validateDownload(data){
 		M.Toast.dismissAll();
 		var fails = 0;
@@ -685,20 +676,12 @@ $(function() {
 			return false
 		}
 
-		console.log("the data mayb e idk");
-		console.log(data.get("timestamp"))
-		console.dir(data)
+	
 		checkfile(data);
 		async function checkfile(data){
-			console.log("data send through checkfile");
-			console.dir(data);
+	
 			var totalTiles = getAllGridTiles().length;
-			console.log("Checking outputdir through dir");
-			outputDir = $("#output-directory-box").val();
-			console.dir(outputDir);
-			console.log("checking to see if can see inside object")
-			console.log(($("#output-directory-box").val())[0])
-
+		
 
 
 			checkData = 
@@ -707,11 +690,6 @@ $(function() {
 			minZoom : getMinZoom(),
 			maxZoom : getMaxZoom(),
 			total:totalTiles}
-
-			console.log("data send through checkfile");
-			console.log(checkData);
-			console.dir(checkData)
-
 
 		var request = await $.ajax({
 			url: "/validate",
@@ -745,11 +723,11 @@ $(function() {
 requests=[];
 		var startTime = Date.now(); 
 		var showTime = new Date(startTime).toUTCString();
-		var toastHTML= '<div class="sometexts" style="flex-direction : column">Starting download! at : ' + showTime +'<div class="progress"><div class="indeterminate"></div></div></div>';
+		var toastHTML= '<div class="sometexts" style="flex-direction : column">Retry download! at : ' + showTime +'<div class="progress"><div class="indeterminate"></div></div></div>';
 
 		M.toast({html: toastHTML, displayLength:9000, classes: 'start'});
 
-		logItemRaw("Starting download! at : " + showTime +"\n");
+		logItemRaw("Retry download! at : " + showTime +"\n");
 
 		var i = 0
 
@@ -872,15 +850,6 @@ requests=[];
 			logItemRaw("\nTotal elapsed time: " + new Date (finishTime - startTime).getSeconds() + " seconds")
 
 			
-			
-
-			//Dev testing checks all the requests, missedTiles and missedRequests
-			console.log("all the requests")
-			console.dir(requests);
-			console.log("all the missiing titles")
-			console.dir(missedTiles)
-			console.log("all the missed requests")
-			console.dir(missedRequest);
 
 			if(validateDownload()){
 				M.toast({html: 'Finished download! at ' +  showdate, displayLength:7000, classes: 'success'});
