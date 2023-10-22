@@ -228,7 +228,8 @@ class serverHandler(BaseHTTPRequestHandler):
             self.writerByType(outputType).close(lock, os.path.join(
                 "output", outputDirectory), filePath, minZoom, maxZoom)
 
-            textPath = os.path.join("output", outputDirectory, "log.txt")
+            textPath = os.path.join(
+                "output", outputDirectory, str(timestamp)+"-log.txt")
             t = open(textPath, "a")
             t.write(logger)
             t.close()

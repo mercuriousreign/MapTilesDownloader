@@ -618,6 +618,8 @@ $(function() {
 			var showdate = new Date(finishTime).toUTCString();
 
 			logItemRaw("\nTotal elapsed time: " + new Date (finishTime - startTime).getSeconds() + " seconds")
+
+			
 			
 			data.append("log",$('#log-view').val())
 
@@ -638,6 +640,7 @@ $(function() {
 			
 			if(validateDownload(data)){
 				M.toast({html: 'Finished download! at ' +  showdate, displayLength:7000, classes: 'success'});
+				logItemRaw("\n'Finished download! at  "+  showdate)
 			} else {
 
 			}
@@ -881,6 +884,7 @@ requests=[];
 
 			if(validateDownload()){
 				M.toast({html: 'Finished download! at ' +  showdate, displayLength:7000, classes: 'success'});
+				logItemRaw("\n'Finished download! at  "+  showdate);
 			}
 
 
