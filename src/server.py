@@ -131,7 +131,7 @@ class serverHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(result).encode('utf-8'))
             return
         # Validates eachfile # check = os.path.isdir(filePath)
-        elif parts.path == "/validate":
+
             # print("postvars in valid")
             # print(postvars)
             # outputDirectory = str(postvars['outputDirectory'][0])
@@ -298,7 +298,8 @@ class serverHandler(BaseHTTPRequestHandler):
                 {"missFiles": result["missFiles"]}).encode('utf-8'))
             return
 
-        file = os.path.join("./UI/", path)
+        # "./UI/"
+        file = os.path.join("UI", path)
         mime = mimetypes.MimeTypes().guess_type(file)[0]
 
         self.send_response(200)

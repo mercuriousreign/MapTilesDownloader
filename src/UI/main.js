@@ -457,6 +457,10 @@ $(function() {
 		strip.prepend(image)
 	}
 
+	function pauseRequest(ms) {
+		return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 	//Sends request to start downlooad
 	async function startDownloading() {
 
@@ -534,6 +538,8 @@ $(function() {
 		//Iterates through all the tiles to download.
 		var iterator = async.eachLimit(allTiles, numThreads, function(item, done) {
 
+			
+
 			if(cancellationToken) {
 				return;
 			}
@@ -556,6 +562,8 @@ $(function() {
 			data.append('bounds', boundsArray.join(","))
 			data.append('center', centerArray.join(","))
 
+			
+
 			var request = $.ajax({
 				"url": url,
 				async: true,
@@ -576,7 +584,12 @@ $(function() {
 					showTinyTile(data.image)
 					logItem(item.x, item.y, item.z, data.message);
 				} else {
-					logItem(item.x, item.y, item.z, data.code + " Error downloading tile, code is : " + data.code);
+
+					message = "";
+					if (data.message){
+						message = data.message;
+					}
+					logItem(item.x, item.y, item.z, data.code + " Error downloading " + message);
 
 					missedTiles.push(item);
 					missedRequest.push(self);
@@ -596,21 +609,28 @@ $(function() {
 				missedData.push(data);
 				//allTiles.push(item);
 
-			}).always(function(data) {
+			}).always(async function(data) {
+				//Google has an limit on request, 
+			if (requests.length >= 248 && requests.length % 248 == 0) {
+				await pauseRequest(5000);
+			}
 				i++;
 
+				
 				removeLayer(boxLayer);
 				updateProgress(i, allTiles.length);
 
 				done();
 				
 				if(cancellationToken) {
-					M.toast({html: 'Download Canceled!', displayLength:7000, classes: 'cancel'});
+					
 					return;
 				}
 			});
 
 			requests.push(request);
+
+			
 
 		}, async function(err) {
 
@@ -793,7 +813,11 @@ requests=[];
 
 					
 				} else {
-					logItem(item.x, item.y, item.z, data.code + " Error downloading tile");
+					message = "";
+					if (data.message){
+						message = data.message;
+					}
+					logItem(item.x, item.y, item.z, data.code + " Error downloading tile " + message);
 
 					missedTiles.push(item);
 					missedRequest.push(self);
@@ -811,7 +835,12 @@ requests=[];
 				missedRequest.push(self);
 				//allTiles.push(item);
 
-			}).always(function(data) {
+			}).always(async function(data) {
+
+				if (requests.length >= 248 && requests.length % 248 == 0) {
+					await pauseRequest(5000);
+				}
+
 				i++;
 
 				removeLayer(boxLayer);
@@ -820,7 +849,7 @@ requests=[];
 				done();
 				
 				if(cancellationToken) {
-					M.toast({html: 'Download Canceled!', displayLength:7000, classes: 'cancel'});
+			
 					return;
 				}
 			});
@@ -896,7 +925,16 @@ requests=[];
 
 	//Function to stop download by aborting every requests
 	function stopDownloading() {
+		M.Toast.dismissAll();
+		if($("#stop-button").html().includes("STOP")){
+			M.toast({html: 'Download Canceled!', displayLength:7000, classes: 'cancel'});
+			var cancelTime = Date.now(); 
+		var showTime = new Date(cancelTime).toUTCString(); //Used for logger and message
+			logItemRaw("Download Canceled! "+showTime);
+		}
+		
 		cancellationToken = true;
+
 
 		for(var i =0 ; i < requests.length; i++) {
 			var request = requests[i];
