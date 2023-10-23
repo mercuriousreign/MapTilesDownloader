@@ -59,6 +59,8 @@ class serverHandler(BaseHTTPRequestHandler):
         postvars = cgi.parse_multipart(self.rfile, pdict)
 
         parts = urlparse(self.path)
+
+        # Post route where tile is being written to file by quadkey
         if parts.path == '/download-tile':
 
             x = int(postvars['x'][0])
@@ -125,41 +127,12 @@ class serverHandler(BaseHTTPRequestHandler):
                     result["message"] = 'Download failed'
 
             self.send_response(200)
-            # self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps(result).encode('utf-8'))
             return
-        # Validates eachfile # check = os.path.isdir(filePath)
 
-            # print("postvars in valid")
-            # print(postvars)
-            # outputDirectory = str(postvars['outputDirectory'][0])
-            # outputFile = str(postvars['outputFile'][0])
-            # minZoom = int(postvars['minZoom'][0])
-            # maxZoom = int(postvars['maxZoom'][0])
-            values = range(3, 15)
-            result = {}
-            result["missFiles"] = []
-            result["code"] = 200
-            result["message"] = 'file is valid'
-            for i in values:
-                filePath = os.path.join("output")
-                check = os.path.isdir(filePath)
-                print("the file path is")
-                print(outputFile)
-                print(filePath)
-                if check == False:
-                    result["missTiles"].append(i)
-                    result["code"] = 404
-                    result["message"] = 'file is missing'
-            self.send_response(200)
-            # self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps(result).encode('utf-8'))
-            return
-        #### Start writing the metadata.json####
+        #### Open the file writer to start writing the metadata.json####
         elif parts.path == '/start-download':
             outputType = str(postvars['outputType'][0])
             outputScale = int(postvars['outputScale'][0])
@@ -199,7 +172,6 @@ class serverHandler(BaseHTTPRequestHandler):
             return
 
         # Closes the  the last json file
-
         elif parts.path == '/end-download':
             outputType = str(postvars['outputType'][0])
             outputScale = int(postvars['outputScale'][0])
@@ -252,6 +224,7 @@ class serverHandler(BaseHTTPRequestHandler):
         path = parts.path.strip('/')
         if path == "":
             path = "index.htm"
+        # Get route to validate download
         if parts.path == "/validate":
 
             query_string = parts.query.replace('%22', '"')
@@ -259,7 +232,7 @@ class serverHandler(BaseHTTPRequestHandler):
 
             minzoom = storQue["minZoom"]
             maxzoom = storQue["maxZoom"]
-            # outputDirectory = storQue["outputDirectory"]
+
             timestamp = storQue["timestamp"]
             total = storQue["total"]
             values = range(minzoom, maxzoom)
@@ -267,7 +240,7 @@ class serverHandler(BaseHTTPRequestHandler):
             result["missFiles"] = []
             result["code"] = 200
             result["message"] = 'file is valid'
-            # check if directory exists
+            # check if directory named after zoom level exists
             for i in values:
                 filePath = os.path.join("output", timestamp, str(i))
                 check = os.path.isdir(filePath)
@@ -278,7 +251,7 @@ class serverHandler(BaseHTTPRequestHandler):
                     result["code"] = 404
                     result["message"] = 'file is missing at path ' + filePath
 
-            # check by last directory
+            # check number of files by last directory
             lastFolder = max(pathlib.Path("output").glob(
                 '*/'), key=os.path.getmtime)
 
@@ -298,9 +271,6 @@ class serverHandler(BaseHTTPRequestHandler):
                 {"missFiles": result["missFiles"]}).encode('utf-8'))
             return
 
-        # "./UI/"
-        # if '\\' in path:
-        #     path = path.rsplit('\\')[1]
         file = os.path.join("UI", path)
         mime = mimetypes.MimeTypes().guess_type(file)[0]
 

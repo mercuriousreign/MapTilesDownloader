@@ -14,9 +14,9 @@ $(function() {
 
 	var requests = []; // array of all requests used in stopDownload function originally to abort tile download, now it is used to validateDownload and retry download (hopefully)
 
-	var missedRequest = []; //Draft array to insert requests that were missed
+	var missedRequest = []; //Array to insert requests that were missed
 	
-	var missedTiles = []; //Draft array to insert tiles that were missed;
+	var missedTiles = []; //Array to insert tiles that were missed;
 
 	var missedData = [];//
 
@@ -399,7 +399,7 @@ $(function() {
 		}
 	}
 
-
+//tile identity in tilebased map based on zoom level, lang and long
 	function generateQuadKey(x, y, z) {
 	    var quadKey = [];
 	    for (var i = z; i > 0; i--) {
@@ -607,7 +607,7 @@ $(function() {
 				missedTiles.push(item);
 				missedRequest.push(self);
 				missedData.push(data);
-				//allTiles.push(item);
+				
 
 			}).always(async function(data) {
 				//Google has an limit on request, 
@@ -677,15 +677,9 @@ $(function() {
 	////**Validates all requests has been successfull
 	function validateDownload(data){
 		M.Toast.dismissAll();
-		var fails = 0;
-		// for (let req of requests){
-		// 	console.log("status f req "+req.status)
-		// 	if (req.status !== 200){
-		// 		fails+=1;
-		// 	}
-		// }
 		
-		if (fails !== 0 || missedRequest.length >0){
+		
+		if ( missedRequest.length >0){
 
 
 	var toastHTML = 'Download complications, '+missedRequest.length+' out of '+ requests.length +' had problems Retry?' +  '<button id="retry"  class="btn-flat toast-action"> Yes </button><button id="noretry" class="btn-flat toast-action"> No </button>';
