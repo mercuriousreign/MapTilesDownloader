@@ -2,13 +2,25 @@ var mapView;
 
 $(function() {
 
-	var map = null;
-	var draw = null;
-	var geocoder = null;
+	var map = null; //Variable that contains the Mapbox view  for user to interact with
+
+	var draw = null; // Contains information about user drawn reactangle such as the start position, used for pinpointing position of map download
+
+	var geocoder = null; // Contain Mapbox geocode process for conversion of location to long and lattitude, etc.
+
 	var bar = null;
 
-	var cancellationToken = null;
-	var requests = [];
+	var cancellationToken = null; //Boolean to check if user has cancel the download process
+
+	var requests = []; // array of all requests used in stopDownload function originally to abort tile download, now it is used to validateDownload and retry download (hopefully)
+
+	var missedRequest = []; //Draft array to insert requests that were missed
+	
+	var missedTiles = []; //Draft array to insert tiles that were missed;
+
+	var missedData = [];//
+
+	//Contains all different sources to download map from, has variable that takes mapbox's information (quad,x,y,z).
 
 	var sources = {
 
@@ -44,7 +56,9 @@ $(function() {
 
 	function initializeMap() {
 
-		mapboxgl.accessToken = 'pk.eyJ1IjoiYWxpYXNocmFmIiwiYSI6ImNqdXl5MHV5YTAzNXI0NG51OWFuMGp4enQifQ.zpd2gZFwBTRqiapp1yci9g';
+		// new token here
+
+		mapboxgl.accessToken = 'pk.eyJ1IjoibWVyY3VyeXJlaWduIiwiYSI6ImNsbnZ3YnF2MDAydHgybmp5MWRlZGJ6dGwifQ.cU-vFZvjlnWDngTGd7410w'
 
 		map = new mapboxgl.Map({
 			container: 'map-view',
@@ -54,8 +68,12 @@ $(function() {
 		});
 
 		geocoder = new MapboxGeocoder({ accessToken: mapboxgl.accessToken });
+
+		//Initial map is only a view, thus neeeds a seperate plugin to process information
 		var control = map.addControl(geocoder);
 	}
+
+	//<-- Functions related to UI -->
 
 	function initializeMaterialize() {
 		$('select').formSelect();
@@ -138,12 +156,16 @@ $(function() {
 
 	}
 
+	//<--- Functions related to Tile geocode --->
+
+	//Gives message and sets draw mode for user to draw area to download tiles
 	function startDrawing() {
 		removeGrid();
 		draw.deleteAll();
 		draw.changeMode('draw_rectangle');
 
 		M.Toast.dismissAll();
+		
 		M.toast({html: 'Click two points on the map to make a rectangle.', displayLength: 7000})
 	}
 
@@ -153,6 +175,7 @@ $(function() {
 		map.on('click', showTilePopup);
 	}
 
+	//Shows and extra rectangle based on initial draw that allows you to modify area to download tiles
 	function showTilePopup(e) {
 
 		if(!e.originalEvent.ctrlKey) {
@@ -176,6 +199,7 @@ $(function() {
 
 	}
 
+	//<-- Functions that calculates tiles dimension -->
 	function long2tile(lon,zoom) {
 		return (Math.floor((lon+180)/360*Math.pow(2,zoom)));
 	}
@@ -193,6 +217,8 @@ $(function() {
 		return (180/Math.PI*Math.atan(0.5*(Math.exp(n)-Math.exp(-n))));
 	}
 
+
+	//Is this the actual image?
 	function getTileRect(x, y, zoom) {
 
 		var c1 = new mapboxgl.LngLat(tile2long(x, zoom), tile2lat(y, zoom));
@@ -340,6 +366,7 @@ $(function() {
 
 	}
 
+	//Adds a layer of grid preview to the mapbox
 	function previewRect(rectInfo) {
 
 		var array = getArrayByBounds(rectInfo.rect);
@@ -363,12 +390,14 @@ $(function() {
 		return id;
 	}
 
+	//Removes the layer that exists on mapbox
 	function removeLayer(id) {
 		if(map.getSource(id) != null) {
 			map.removeLayer(id);
 			map.removeSource(id);
 		}
 	}
+
 
 	function generateQuadKey(x, y, z) {
 	    var quadKey = [];
@@ -387,6 +416,7 @@ $(function() {
 	    return quadKey.join('');
 	}
 
+	//<-- Setups the UI page (Download)
 	function initializeDownloader() {
 
 		bar = new ProgressBar.Circle($('#progress-radial').get(0), {
@@ -410,7 +440,9 @@ $(function() {
 		//$("#output-directory-box").val(timestamp)
 	}
 
+	//Previews 4 of the latest downloaded tiles at the .tile-strip tag
 	function showTinyTile(base64) {
+		//Remove old tiles
 		var currentImages = $(".tile-strip img");
 
 		for(var i = 4; i < currentImages.length; i++) {
@@ -419,6 +451,7 @@ $(function() {
 
 		var image = $("<img/>").attr('src', "data:image/png;base64, " + base64)
 
+		//Adds new tiles
 		var strip = $(".tile-strip");
 		strip.prepend(image)
 	}
@@ -432,6 +465,9 @@ $(function() {
 
 		cancellationToken = false; 
 		requests = [];
+		missedRequest = [];
+		missedTiles = [];
+		missedData = [];
 
 		$("#main-sidebar").hide();
 		$("#download-sidebar").show();
@@ -441,10 +477,19 @@ $(function() {
 		clearLogs();
 		M.Toast.dismissAll();
 
-		var timestamp = Date.now().toString();
+		var timestamp = Date.now().toString(); //Used for tile file
+
+
+		var startTime = Date.now(); 
+		var showTime = new Date(startTime).toUTCString(); //Used for logger and message
 
 		var allTiles = getAllGridTiles();
 		updateProgress(0, allTiles.length);
+
+
+	var toastHTML= '<div class="sometexts" style="flex-direction : column">Starting download! at : ' + showTime +'<div class="progress"><div class="indeterminate"></div></div></div>';
+
+		M.toast({html: toastHTML, displayLength:9000, classes: 'start'});
 
 		var numThreads = parseInt($("#parallel-threads-box").val());
 		var outputDirectory = $("#output-directory-box").val();
@@ -469,6 +514,7 @@ $(function() {
 		data.append('bounds', boundsArray.join(","))
 		data.append('center', centerArray.join(","))
 
+		// Initial start of the download phase
 		var request = await $.ajax({
 			url: "/start-download",
 			async: true,
@@ -481,7 +527,171 @@ $(function() {
 		})
 
 		let i = 0;
+		//Iterates through all the tiles to download.
 		var iterator = async.eachLimit(allTiles, numThreads, function(item, done) {
+
+			if(cancellationToken) {
+				return;
+			}
+
+			var boxLayer = previewRect(item);
+
+			var url = "/download-tile";
+
+			var data = new FormData();
+			data.append('x', item.x)
+			data.append('y', item.y)
+			data.append('z', item.z)
+			data.append('quad', generateQuadKey(item.x, item.y, item.z))
+			data.append('outputDirectory', outputDirectory)
+			data.append('outputFile', outputFile)
+			data.append('outputType', outputType)
+			data.append('outputScale', outputScale)
+			data.append('timestamp', timestamp)
+			data.append('source', source)
+			data.append('bounds', boundsArray.join(","))
+			data.append('center', centerArray.join(","))
+
+			var request = $.ajax({
+				"url": url,
+				async: true,
+				timeout: 30 * 1000,
+				type: "post",
+			    contentType: false,
+			    processData: false,
+				data: data,
+				dataType: 'json',
+			}).done(function(data) { ///this is where tile is being taken from
+
+				if(cancellationToken) {
+					return;
+				}
+
+				/// The code that differentiate between what has been downloaded or not//
+				if(data.code == 200) {
+					showTinyTile(data.image)
+					logItem(item.x, item.y, item.z, data.message);
+				} else {
+					logItem(item.x, item.y, item.z, data.code + " Error downloading tile, code is : " + data.code);
+
+					missedTiles.push(item);
+					missedRequest.push(self);
+					missedData.push(data);
+
+				}
+
+			}).fail(function(data, textStatus, errorThrown) {
+
+				if(cancellationToken) {
+					return;
+				}
+
+				logItem(item.x, item.y, item.z, "Error while relaying tile");
+				missedTiles.push(item);
+				missedRequest.push(self);
+				missedData.push(data);
+				//allTiles.push(item);
+
+			}).always(function(data) {
+				i++;
+
+				removeLayer(boxLayer);
+				updateProgress(i, allTiles.length);
+
+				done();
+				
+				if(cancellationToken) {
+					M.toast({html: 'Download Canceled!', displayLength:7000, classes: 'cancel'});
+					return;
+				}
+			});
+
+			requests.push(request);
+
+		}, async function(err) {
+
+
+			logItemRaw("\nAll requests are done!");
+			var finishTime = Date.now();
+			var showdate = new Date(finishTime).toUTCString();
+
+			logItemRaw("\nTotal elapsed time: " + new Date (finishTime - startTime).getSeconds() + " seconds")
+			
+			data.append("log",$('#log-view').val())
+
+			var request = await $.ajax({
+				url: "/end-download",
+				async: true,
+				timeout: 30 * 1000,
+				type: "post",
+				contentType: false,
+				processData: false,
+				data: data,
+				dataType: 'json',
+			})
+
+			updateProgress(allTiles.length, allTiles.length);
+			
+
+			
+			if(validateDownload()){
+				M.toast({html: 'Finished download! at ' +  showdate, displayLength:7000, classes: 'success'});
+			}
+
+			//Dev testing checks all the requests, missedTiles and missedRequests
+			console.log("all the requests")
+			console.dir(requests);
+			console.log("all the missiing titles")
+			console.dir(missedTiles)
+			console.log("all the missed requests")
+			console.dir(missedRequest);
+			console.log("all the missed datas")
+			console.dir(missedData);
+
+			
+			
+
+			$("#stop-button").html("FINISH");
+		});
+
+	}
+
+	////Validates all requests has been successfull
+	function validateDownload(){
+		M.Toast.dismissAll();
+		var fails = 0;
+		// for (let req of requests){
+		// 	console.log("status f req "+req.status)
+		// 	if (req.status !== 200){
+		// 		fails+=1;
+		// 	}
+		// }
+
+		
+		if (fails !== 0 || missedRequest.length >0){
+
+
+	var toastHTML = 'Download complications, '+fails+' out of '+ requests.length +' had problems Retry?' +  '<button id="retry"  class="btn-flat toast-action"> Yes </button><button id="noretry" class="btn-flat toast-action"> No </button>';
+
+			M.toast({html: toastHTML, displayLength:10000, classes: 'fail'});
+
+			$("#retry").click(retryDownload)
+			// $("#retry").click(function(){alert("testing");console.log("button clicks")})
+			$("#noretry").click(function(){M.Toast.dismissAll()})
+			return false
+		}
+
+
+
+		return true
+	}
+
+	////A retryfunction to download all the missed tiles****
+	function retryDownload(){
+
+		var i = 0
+		var numThreads = parseInt($("#parallel-threads-box").val());
+		var iterator = async.eachLimit(missedTiles, numThreads, function(item, done) {
 
 			if(cancellationToken) {
 				return;
@@ -520,11 +730,24 @@ $(function() {
 					return;
 				}
 
+				/// The code that differentiate between what has been downloaded or not//
 				if(data.code == 200) {
 					showTinyTile(data.image)
 					logItem(item.x, item.y, item.z, data.message);
+
+					if (missedRequest.includes(self) && missedTiles.includes(item))
+					{
+						missedRequest.splice(missedRequest.indexOf(self),1);
+						missedTiles.splice(missedTiles.indexOf(item),1);
+					}
+
+					
 				} else {
 					logItem(item.x, item.y, item.z, data.code + " Error downloading tile");
+
+					missedTiles.push(item);
+					missedRequest.push(self);
+
 				}
 
 			}).fail(function(data, textStatus, errorThrown) {
@@ -534,6 +757,8 @@ $(function() {
 				}
 
 				logItem(item.x, item.y, item.z, "Error while relaying tile");
+				missedTiles.push(item);
+				missedRequest.push(self);
 				//allTiles.push(item);
 
 			}).always(function(data) {
@@ -545,6 +770,7 @@ $(function() {
 				done();
 				
 				if(cancellationToken) {
+					M.toast({html: 'Download Canceled!', displayLength:7000, classes: 'cancel'});
 					return;
 				}
 			});
@@ -564,14 +790,38 @@ $(function() {
 				dataType: 'json',
 			})
 
-			updateProgress(allTiles.length, allTiles.length);
-			logItemRaw("All requests are done");
+			updateProgress(missedTiles.length, missedTiles.length);
+			logItemRaw("\nAll requests are done!");
+			var finishTime = Date.now();
+			var showdate = new Date(finishTime).toUTCString();
+
+		
+
+			logItemRaw("\nTotal elapsed time: " + new Date (finishTime - startTime).getSeconds() + " seconds")
+
+			
+			
+
+			//Dev testing checks all the requests, missedTiles and missedRequests
+			console.log("all the requests")
+			console.dir(requests);
+			console.log("all the missiing titles")
+			console.dir(missedTiles)
+			console.log("all the missed requests")
+			console.dir(missedRequest);
+
+			if(validateDownload()){
+				M.toast({html: 'Finished download! at ' +  showdate, displayLength:7000, classes: 'success'});
+			}
+
 
 			$("#stop-button").html("FINISH");
 		});
 
+
 	}
 
+	//// animates the circular bar UI alongside changes text based on progress
 	function updateProgress(value, total) {
 		var progress = value / total;
 
@@ -581,10 +831,12 @@ $(function() {
 		$("#progress-subtitle").html(value.toLocaleString() + " <span>out of</span> " + total.toLocaleString())
 	}
 
+	// Sends the corrdiantes of the item that has been downloaded to logger
 	function logItem(x, y, z, text) {
 		logItemRaw(x + ',' + y + ',' + z + ' : ' + text)
 	}
 
+	// Sends input string to the logger
 	function logItemRaw(text) {
 
 		var logger = $('#log-view');
@@ -593,11 +845,13 @@ $(function() {
 		logger.scrollTop(logger[0].scrollHeight);
 	}
 
+	//Clears logs
 	function clearLogs() {
 		var logger = $('#log-view');
 		logger.val('');
 	}
 
+	//Function to stop download by aborting every requests
 	function stopDownloading() {
 		cancellationToken = true;
 
