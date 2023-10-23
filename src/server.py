@@ -299,6 +299,8 @@ class serverHandler(BaseHTTPRequestHandler):
             return
 
         # "./UI/"
+        # if '\\' in path:
+        #     path = path.rsplit('\\')[1]
         file = os.path.join("UI", path)
         mime = mimetypes.MimeTypes().guess_type(file)[0]
 
