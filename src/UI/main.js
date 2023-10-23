@@ -14,9 +14,9 @@ $(function() {
 
 	var requests = []; // array of all requests used in stopDownload function originally to abort tile download, now it is used to validateDownload and retry download (hopefully)
 
-	var missedRequest = []; //Draft array to insert requests that were missed
+	var missedRequest = []; //Array to insert requests that were missed
 	
-	var missedTiles = []; //Draft array to insert tiles that were missed;
+	var missedTiles = []; //Array to insert tiles that were missed;
 
 	var missedData = [];//
 
@@ -218,7 +218,7 @@ $(function() {
 	}
 
 
-	//Is this the actual image?
+	//Gets the bounds of the tile
 	function getTileRect(x, y, zoom) {
 
 		var c1 = new mapboxgl.LngLat(tile2long(x, zoom), tile2lat(y, zoom));
@@ -328,6 +328,7 @@ $(function() {
 		return allTiles;
 	}
 
+	//<-- Function related to grid
 	function removeGrid() {
 		removeLayer("grid-preview");
 	}
@@ -398,7 +399,7 @@ $(function() {
 		}
 	}
 
-
+//tile identity in tilebased map based on zoom level, lang and long
 	function generateQuadKey(x, y, z) {
 	    var quadKey = [];
 	    for (var i = z; i > 0; i--) {
@@ -456,6 +457,11 @@ $(function() {
 		strip.prepend(image)
 	}
 
+	function pauseRequest(ms) {
+		return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+	//Sends request to start downlooad
 	async function startDownloading() {
 
 		if(draw.getAll().features.length == 0) {
@@ -490,6 +496,8 @@ $(function() {
 	var toastHTML= '<div class="sometexts" style="flex-direction : column">Starting download! at : ' + showTime +'<div class="progress"><div class="indeterminate"></div></div></div>';
 
 		M.toast({html: toastHTML, displayLength:9000, classes: 'start'});
+
+		logItemRaw("Starting download! at : " + showTime +"\n");
 
 		var numThreads = parseInt($("#parallel-threads-box").val());
 		var outputDirectory = $("#output-directory-box").val();
@@ -530,6 +538,8 @@ $(function() {
 		//Iterates through all the tiles to download.
 		var iterator = async.eachLimit(allTiles, numThreads, function(item, done) {
 
+			
+
 			if(cancellationToken) {
 				return;
 			}
@@ -552,6 +562,8 @@ $(function() {
 			data.append('bounds', boundsArray.join(","))
 			data.append('center', centerArray.join(","))
 
+			
+
 			var request = $.ajax({
 				"url": url,
 				async: true,
@@ -572,7 +584,12 @@ $(function() {
 					showTinyTile(data.image)
 					logItem(item.x, item.y, item.z, data.message);
 				} else {
-					logItem(item.x, item.y, item.z, data.code + " Error downloading tile, code is : " + data.code);
+
+					message = "";
+					if (data.message){
+						message = data.message;
+					}
+					logItem(item.x, item.y, item.z, data.code + " Error downloading " + message);
 
 					missedTiles.push(item);
 					missedRequest.push(self);
@@ -590,23 +607,30 @@ $(function() {
 				missedTiles.push(item);
 				missedRequest.push(self);
 				missedData.push(data);
-				//allTiles.push(item);
+				
 
-			}).always(function(data) {
+			}).always(async function(data) {
+				//Google has an limit on request, 
+			if (requests.length >= 248 && requests.length % 248 == 0) {
+				await pauseRequest(5000);
+			}
 				i++;
 
+				
 				removeLayer(boxLayer);
 				updateProgress(i, allTiles.length);
 
 				done();
 				
 				if(cancellationToken) {
-					M.toast({html: 'Download Canceled!', displayLength:7000, classes: 'cancel'});
+					
 					return;
 				}
 			});
 
 			requests.push(request);
+
+			
 
 		}, async function(err) {
 
@@ -616,6 +640,8 @@ $(function() {
 			var showdate = new Date(finishTime).toUTCString();
 
 			logItemRaw("\nTotal elapsed time: " + new Date (finishTime - startTime).getSeconds() + " seconds")
+
+			
 			
 			data.append("log",$('#log-view').val())
 
@@ -634,21 +660,13 @@ $(function() {
 			
 
 			
-			if(validateDownload()){
+			if(validateDownload(data)){
 				M.toast({html: 'Finished download! at ' +  showdate, displayLength:7000, classes: 'success'});
+				logItemRaw("\n'Finished download! at  "+  showdate)
+			} else {
+
 			}
 
-			//Dev testing checks all the requests, missedTiles and missedRequests
-			console.log("all the requests")
-			console.dir(requests);
-			console.log("all the missiing titles")
-			console.dir(missedTiles)
-			console.log("all the missed requests")
-			console.dir(missedRequest);
-			console.log("all the missed datas")
-			console.dir(missedData);
-
-			
 			
 
 			$("#stop-button").html("FINISH");
@@ -656,41 +674,87 @@ $(function() {
 
 	}
 
-	////Validates all requests has been successfull
-	function validateDownload(){
+	////**Validates all requests has been successfull
+	function validateDownload(data){
 		M.Toast.dismissAll();
-		var fails = 0;
-		// for (let req of requests){
-		// 	console.log("status f req "+req.status)
-		// 	if (req.status !== 200){
-		// 		fails+=1;
-		// 	}
-		// }
-
 		
-		if (fails !== 0 || missedRequest.length >0){
+		
+		if ( missedRequest.length >0){
 
 
-	var toastHTML = 'Download complications, '+fails+' out of '+ requests.length +' had problems Retry?' +  '<button id="retry"  class="btn-flat toast-action"> Yes </button><button id="noretry" class="btn-flat toast-action"> No </button>';
+	var toastHTML = 'Download complications, '+missedRequest.length+' out of '+ requests.length +' had problems Retry?' +  '<button id="retry"  class="btn-flat toast-action"> Yes </button><button id="noretry" class="btn-flat toast-action"> No </button>';
 
 			M.toast({html: toastHTML, displayLength:10000, classes: 'fail'});
-
-			$("#retry").click(retryDownload)
-			// $("#retry").click(function(){alert("testing");console.log("button clicks")})
+			$("#retry").click(function(){retryDownload(data)})
 			$("#noretry").click(function(){M.Toast.dismissAll()})
 			return false
 		}
 
+	
+		checkfile(data);
+		async function checkfile(data){
+	
+			var totalTiles = getAllGridTiles().length;
+		
 
 
+			checkData = 
+			{
+			timestamp : data.get("timestamp"),
+			minZoom : getMinZoom(),
+			maxZoom : getMaxZoom(),
+			total:totalTiles}
+
+		var request = await $.ajax({
+			url: "/validate",
+			async: true,
+			timeout: 30 * 1000,
+			type: "get",
+			contentType: 'application/json; charset=utf-8',
+			processData: true,
+			data: JSON.stringify(checkData),
+			dataType: 'json',
+		}).done(function(data){
+			console.log("done function data in validate\n"+data)
+			console.dir(data)
+			if(data.missFiles.length>0){
+				var toastHTML = 'Download complications, '+ data.missTiles.length +' are missing Restart download?' +  '<button id="retry"  class="btn-flat toast-action"> Yes </button><button id="noretry" class="btn-flat toast-action"> No </button>';
+
+			M.toast({html: toastHTML, displayLength:10000, classes: 'fail'});
+			$("#retry").click(startDownloading)
+			$("#noretry").click(function(){M.Toast.dismissAll()})
+				return false
+			}
+		})
+	}
+		
 		return true
 	}
 
 	////A retryfunction to download all the missed tiles****
-	function retryDownload(){
+	function retryDownload(oldData){
+
+requests=[];
+		var startTime = Date.now(); 
+		var showTime = new Date(startTime).toUTCString();
+		var toastHTML= '<div class="sometexts" style="flex-direction : column">Retry download! at : ' + showTime +'<div class="progress"><div class="indeterminate"></div></div></div>';
+
+		M.toast({html: toastHTML, displayLength:9000, classes: 'start'});
+
+		logItemRaw("Retry download! at : " + showTime +"\n");
 
 		var i = 0
+
 		var numThreads = parseInt($("#parallel-threads-box").val());
+		var outputDirectory = $("#output-directory-box").val();
+		var outputFile = $("#output-file-box").val();
+		var outputType = $("#output-type").val();
+		var outputScale = $("#output-scale").val();
+		var source = $("#source-box").val()
+		var bounds = getBounds();
+		var boundsArray = [bounds.getSouthWest().lng, bounds.getSouthWest().lat, bounds.getNorthEast().lng, bounds.getNorthEast().lat]
+		var centerArray = [bounds.getCenter().lng, bounds.getCenter().lat, getMaxZoom()]
+
 		var iterator = async.eachLimit(missedTiles, numThreads, function(item, done) {
 
 			if(cancellationToken) {
@@ -710,7 +774,7 @@ $(function() {
 			data.append('outputFile', outputFile)
 			data.append('outputType', outputType)
 			data.append('outputScale', outputScale)
-			data.append('timestamp', timestamp)
+			data.append('timestamp', oldData.get("timestamp"))
 			data.append('source', source)
 			data.append('bounds', boundsArray.join(","))
 			data.append('center', centerArray.join(","))
@@ -743,7 +807,11 @@ $(function() {
 
 					
 				} else {
-					logItem(item.x, item.y, item.z, data.code + " Error downloading tile");
+					message = "";
+					if (data.message){
+						message = data.message;
+					}
+					logItem(item.x, item.y, item.z, data.code + " Error downloading tile " + message);
 
 					missedTiles.push(item);
 					missedRequest.push(self);
@@ -761,16 +829,21 @@ $(function() {
 				missedRequest.push(self);
 				//allTiles.push(item);
 
-			}).always(function(data) {
+			}).always(async function(data) {
+
+				if (requests.length >= 248 && requests.length % 248 == 0) {
+					await pauseRequest(5000);
+				}
+
 				i++;
 
 				removeLayer(boxLayer);
-				updateProgress(i, allTiles.length);
+				updateProgress(i, missedTiles.length);
 
 				done();
 				
 				if(cancellationToken) {
-					M.toast({html: 'Download Canceled!', displayLength:7000, classes: 'cancel'});
+			
 					return;
 				}
 			});
@@ -786,7 +859,7 @@ $(function() {
 				type: "post",
 				contentType: false,
 				processData: false,
-				data: data,
+				data: oldData,
 				dataType: 'json',
 			})
 
@@ -800,21 +873,14 @@ $(function() {
 			logItemRaw("\nTotal elapsed time: " + new Date (finishTime - startTime).getSeconds() + " seconds")
 
 			
-			
-
-			//Dev testing checks all the requests, missedTiles and missedRequests
-			console.log("all the requests")
-			console.dir(requests);
-			console.log("all the missiing titles")
-			console.dir(missedTiles)
-			console.log("all the missed requests")
-			console.dir(missedRequest);
 
 			if(validateDownload()){
 				M.toast({html: 'Finished download! at ' +  showdate, displayLength:7000, classes: 'success'});
+				logItemRaw("\n'Finished download! at  "+  showdate);
 			}
 
 
+			
 			$("#stop-button").html("FINISH");
 		});
 
@@ -853,7 +919,16 @@ $(function() {
 
 	//Function to stop download by aborting every requests
 	function stopDownloading() {
+		M.Toast.dismissAll();
+		if($("#stop-button").html().includes("STOP")){
+			M.toast({html: 'Download Canceled!', displayLength:7000, classes: 'cancel'});
+			var cancelTime = Date.now(); 
+		var showTime = new Date(cancelTime).toUTCString(); //Used for logger and message
+			logItemRaw("Download Canceled! "+showTime);
+		}
+		
 		cancellationToken = true;
+
 
 		for(var i =0 ; i < requests.length; i++) {
 			var request = requests[i];

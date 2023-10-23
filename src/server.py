@@ -24,6 +24,7 @@ import glob
 import os
 import base64
 import mimetypes
+import pathlib
 
 from file_writer import FileWriter
 from mbtiles_writer import MbtilesWriter
@@ -58,6 +59,8 @@ class serverHandler(BaseHTTPRequestHandler):
         postvars = cgi.parse_multipart(self.rfile, pdict)
 
         parts = urlparse(self.path)
+
+        # Post route where tile is being written to file by quadkey
         if parts.path == '/download-tile':
 
             x = int(postvars['x'][0])
@@ -124,13 +127,12 @@ class serverHandler(BaseHTTPRequestHandler):
                     result["message"] = 'Download failed'
 
             self.send_response(200)
-            # self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps(result).encode('utf-8'))
             return
 
-        #### Start writing the metadata.json####
+        #### Open the file writer to start writing the metadata.json####
         elif parts.path == '/start-download':
             outputType = str(postvars['outputType'][0])
             outputScale = int(postvars['outputScale'][0])
@@ -170,7 +172,6 @@ class serverHandler(BaseHTTPRequestHandler):
             return
 
         # Closes the  the last json file
-
         elif parts.path == '/end-download':
             outputType = str(postvars['outputType'][0])
             outputScale = int(postvars['outputScale'][0])
@@ -199,7 +200,8 @@ class serverHandler(BaseHTTPRequestHandler):
             self.writerByType(outputType).close(lock, os.path.join(
                 "output", outputDirectory), filePath, minZoom, maxZoom)
 
-            textPath = os.path.join("output", outputDirectory, "log.txt")
+            textPath = os.path.join(
+                "output", outputDirectory, str(timestamp)+"-log.txt")
             t = open(textPath, "a")
             t.write(logger)
             t.close()
@@ -222,8 +224,54 @@ class serverHandler(BaseHTTPRequestHandler):
         path = parts.path.strip('/')
         if path == "":
             path = "index.htm"
+        # Get route to validate download
+        if parts.path == "/validate":
 
-        file = os.path.join("./UI/", path)
+            query_string = parts.query.replace('%22', '"')
+            storQue = json.loads(query_string)
+
+            minzoom = storQue["minZoom"]
+            maxzoom = storQue["maxZoom"]
+
+            timestamp = storQue["timestamp"]
+            total = storQue["total"]
+            values = range(minzoom, maxzoom)
+            result = {}
+            result["missFiles"] = []
+            result["code"] = 200
+            result["message"] = 'file is valid'
+            # check if directory named after zoom level exists
+            for i in values:
+                filePath = os.path.join("output", timestamp, str(i))
+                check = os.path.isdir(filePath)
+                print("the file path is")
+                print(filePath)
+                if check == False:
+                    result["missFiles"].append(i)
+                    result["code"] = 404
+                    result["message"] = 'file is missing at path ' + filePath
+
+            # check number of files by last directory
+            lastFolder = max(pathlib.Path("output").glob(
+                '*/'), key=os.path.getmtime)
+
+            count = 0
+            for root_dir, cur_dir, files in os.walk(lastFolder):
+                count += len(files)
+            if (count-2) != total:
+                result["code"] = 404
+                result["message"] = 'file is missing by count ' + \
+                    str(count-2) + ' out of ' + str(total)
+
+            # return result
+            self.send_response(result["code"], result["message"])
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(
+                {"missFiles": result["missFiles"]}).encode('utf-8'))
+            return
+
+        file = os.path.join("UI", path)
         mime = mimetypes.MimeTypes().guess_type(file)[0]
 
         self.send_response(200)
