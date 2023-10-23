@@ -1,4 +1,18 @@
-# Map Tiles Downloader
+# Map Tiles Downloader +
+
+**Is the fork of the original with added improvements**
+
+- New notifications
+- Addition of new information to logger
+- Enchancement to requests for example : New validation function
+
+<p align="center">
+  <img src="gif/GifForView.gif">
+</p>
+
+---
+
+**Original Description**
 
 **A super easy to use GUI for downloading map tiles**
 
